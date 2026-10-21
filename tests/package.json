@@ -1,0 +1,23 @@
+{
+  "name": "chess-hints-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:unit": "node chessutil.test.mjs",
+    "fixtures": "node capture.mjs out/fixtures",
+    "test:vision": "node vision.test.mjs out/fixtures && node crosssize.test.mjs out/fixtures",
+    "test:e2e": "node e2e.mjs out/e2e",
+    "test": "npm run test:unit && npm run fixtures && npm run test:vision && npm run test:e2e",
+    "icons": "node make-icons.mjs",
+    "bench": "node latency.mjs 5",
+    "pack": "node ../scripts/pack.mjs",
+    "demo": "node record-demo.mjs"
+  },
+  "devDependencies": {
+    "chessground": "^9.2.1",
+    "cm-chessboard": "^8.15.3",
+    "gifenc": "^1.0.3",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^24.43.1"
+  }
+}

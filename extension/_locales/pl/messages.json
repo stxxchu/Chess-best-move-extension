@@ -1,0 +1,9 @@
+{
+  "extName": { "message": "Chess Hints – podpowiedzi ruchów z ekranu" },
+  "extShortName": { "message": "Chess Hints" },
+  "extDescription": { "message": "Znajduje szachownicę na ekranie, rozpoznaje pozycję i podpowiada ruchy na wybranym poziomie, od najlepszych po najgorsze. Stockfish działa lokalnie." },
+  "actionTitle": { "message": "Chess Hints (Alt+Shift+C)" },
+  "cmdToggle": { "message": "Pokaż / ukryj panel" },
+  "cmdScan": { "message": "Zeskanuj planszę teraz" },
+  "unsupportedPage": { "message": "Chess Hints nie działa na tej stronie" }
+}

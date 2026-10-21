@@ -1,0 +1,9 @@
+{
+  "extName": { "message": "Chess Hints – move suggestions from your screen" },
+  "extShortName": { "message": "Chess Hints" },
+  "extDescription": { "message": "Finds the chessboard on your screen, reads the position and suggests moves at the level you pick, from the best to the worst. Stockfish runs locally." },
+  "actionTitle": { "message": "Chess Hints (Alt+Shift+C)" },
+  "cmdToggle": { "message": "Show / hide the panel" },
+  "cmdScan": { "message": "Scan the board now" },
+  "unsupportedPage": { "message": "Chess Hints does not work on this page" }
+}

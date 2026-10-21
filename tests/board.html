@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Test board</title>
+<link rel="stylesheet" href="/node_modules/chessground/assets/chessground.base.css">
+<link rel="stylesheet" href="/node_modules/chessground/assets/chessground.brown.css">
+<link rel="stylesheet" href="/node_modules/chessground/assets/chessground.cburnett.css">
+<link rel="stylesheet" href="/node_modules/cm-chessboard/assets/chessboard.css">
+<style>
+  body { margin: 0; font-family: sans-serif; background: #2b2a28; color: #ddd; }
+  body.light { background: #f4f4f4; color: #222; }
+  header { height: 56px; display: flex; align-items: center; padding: 0 24px; gap: 24px; background: #1f1e1c; }
+  body.light header { background: #fff; border-bottom: 1px solid #ddd; }
+  main { display: flex; gap: 32px; padding: 24px 40px; }
+  #board { width: var(--size, 560px); height: var(--size, 560px); position: relative; }
+  aside { flex: 1; max-width: 360px; line-height: 1.6; }
+  .moves { display: grid; grid-template-columns: 30px 1fr 1fr; gap: 2px 8px; }
+  .green-cg cg-board { background-image: none; background-color: #769656; }
+  .green-cg cg-board::before { content: ''; }
+</style>
+</head>
+<body>
+<header><b>Demo Chess</b><span>Play</span><span>Puzzles</span><span>Learn</span></header>
+<main>
+  <div id="board"></div>
+  <aside>
+    <h3>Analysis board</h3>
+    <p>Player A (1500) vs Player B (1520)</p>
+  </aside>
+</main>
+<script type="module">
+  import { Chessground } from '/node_modules/chessground/dist/chessground.js';
+  import { Chessboard, COLOR, BORDER_TYPE } from '/node_modules/cm-chessboard/src/Chessboard.js';
+
+  const q = new URLSearchParams(location.search);
+  const fen = q.get('fen') || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  const black = q.get('black') === '1';
+  const lib = q.get('lib') || 'cg';
+  const size = q.get('size') || '560';
+  if (q.get('light') === '1') document.body.classList.add('light');
+  document.getElementById('board').style.setProperty('--size', size + 'px');
+  const lastMove = q.get('last') ? q.get('last').match(/.{2}/g) : undefined;
+
+  if (lib === 'cg') {
+    document.getElementById('board').classList.add('cg-wrap');
+    window.cg = Chessground(document.getElementById('board'), {
+      fen: fen.split(' ')[0], orientation: black ? 'black' : 'white', lastMove, coordinates: true,
+    });
+  } else {
+    const [, theme, pieces] = lib.split('+');
+    window.cb = new Chessboard(document.getElementById('board'), {
+      position: fen.split(' ')[0],
+      orientation: black ? COLOR.black : COLOR.white,
+      assetsUrl: '/node_modules/cm-chessboard/assets/',
+      style: { cssClass: theme || 'default', borderType: BORDER_TYPE.none, showCoordinates: true,
+               pieces: { file: 'pieces/' + (pieces || 'standard') + '.svg' } },
+    });
+  }
+  window.boardReady = true;
+</script>
+</body>
+</html>

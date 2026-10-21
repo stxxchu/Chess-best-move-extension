@@ -22,11 +22,12 @@ Rozszerzenie do Brave, Chrome i Edge. Znajduje szachownicę na ekranie, rozpozna
 
 ## Instalacja
 
-1. Pobierz `chess-hints-x.y.z.zip` z [Releases](../../releases) i rozpakuj.
-2. Otwórz `brave://extensions` (albo `chrome://extensions`) i włącz **Tryb dewelopera**.
-3. Kliknij **Załaduj rozpakowane** i wskaż rozpakowany folder.
+1. Otwórz [najnowsze wydanie](../../releases/latest) i w sekcji **Assets** pobierz **`chess-hints-x.y.z.zip`**. Nie „Source code”: to całe repozytorium, a wtyczka jest w jego podfolderze `extension`.
+2. Rozpakuj. W rozpakowanym folderze `manifest.json` jest od razu w środku.
+3. Otwórz `brave://extensions` (albo `chrome://extensions`) i włącz **Tryb dewelopera**.
+4. Kliknij **Załaduj rozpakowane** i wskaż ten folder.
 
-Żeby uruchomić ze źródeł, wskaż folder `extension`.
+Komunikat „Brak pliku manifestu lub nie można go odczytać” oznacza zły folder: wskaż ten, w którym leży `manifest.json` (w kodzie źródłowym to `extension`).
 
 ## Użycie
 

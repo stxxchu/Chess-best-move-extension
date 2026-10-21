@@ -21,6 +21,6 @@ jobs:
           test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME does not match manifest version $version"; exit 1; }
       - run: node scripts/pack.mjs
       - name: Publish the release
-        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --title "Chess Hints $GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --title "Chess Hints $GITHUB_REF_NAME" --notes-file .github/release-notes.md --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

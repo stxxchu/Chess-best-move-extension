@@ -22,11 +22,12 @@ A browser extension for Brave, Chrome and Edge. It finds the chessboard on your 
 
 ## Install
 
-1. Download `chess-hints-x.y.z.zip` from [Releases](../../releases) and unzip it.
-2. Open `brave://extensions` (or `chrome://extensions`) and turn on **Developer mode**.
-3. Click **Load unpacked** and pick the unzipped folder.
+1. Open the [latest release](../../releases/latest) and under **Assets** download **`chess-hints-x.y.z.zip`**. Not “Source code”: that is the whole repository and the extension sits in its `extension` subfolder.
+2. Unzip it. The folder you get has `manifest.json` directly inside.
+3. Open `brave://extensions` (or `chrome://extensions`) and turn on **Developer mode**.
+4. Click **Load unpacked** and pick that folder.
 
-To run from source, load the `extension` folder instead.
+If you see “Manifest file is missing or unreadable”, you picked the wrong folder: choose the one that contains `manifest.json` (in the source code that is `extension`).
 
 ## Usage
 

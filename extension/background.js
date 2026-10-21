@@ -3,6 +3,7 @@ import * as V from './vision.js';
 const CONTENT_FILES = ['chessutil.js', 'i18n.js', 'content.js'];
 const templateCache = new Map();
 const lastSquares = new Map();
+const lastShots = new Map();
 const quota = { windowStart: 0, used: 0 };
 let creatingOffscreen = null;
 
@@ -14,7 +15,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.target !== 'bg') return;
-  const handler = { scan, analyze, progress, teach, resetCalibration }[msg.type];
+  const handler = { scan, analyze, progress, teach, resetCalibration, snapshot, openIssue }[msg.type];
   if (!handler) return;
   handler(msg, sender).then(sendResponse, e => sendResponse({ ok: false, error: String(e && e.message || e) }));
   return true;
@@ -108,9 +109,14 @@ async function scan(msg, sender) {
     const last = scaleRect(msg.lastRect, k);
     rect = last && V.verifyBoard(img, last) >= 20 ? last : V.detectBoard(img);
   }
-  if (!rect) return { ok: false, error: 'no-board' };
+  if (!rect) {
+    lastShots.set(sender.tab.id, V.downscale(img, Math.ceil(img.width / 1280)));
+    return { ok: false, error: 'no-board' };
+  }
   if (rect.partial) return { ok: false, error: 'partial', rect: toCss(rect) };
 
+  const margin = rect.w * 0.04;
+  lastShots.set(sender.tab.id, V.crop(img, rect.x - margin, rect.y - margin, rect.w + 2 * margin, rect.h + 2 * margin));
   const sq = V.analyzeSquares(img, rect);
   const base = { rect: toCss(rect), colors: sq.colors };
   let tpl = await getTemplates(msg.host);
@@ -142,6 +148,24 @@ async function teach(msg, sender) {
   const tpl = last && last.host === msg.host && await getTemplates(msg.host);
   if (!tpl) return { ok: false };
   await saveTemplates(msg.host, V.teach(tpl.raw, last.sq, msg.index, msg.piece));
+  return { ok: true };
+}
+
+async function snapshot(msg, sender) {
+  const img = lastShots.get(sender.tab.id);
+  if (!img) return { ok: false };
+  const canvas = new OffscreenCanvas(img.width, img.height);
+  canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(img.data), img.width, img.height), 0, 0);
+  const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { ok: true, png: btoa(bin) };
+}
+
+async function openIssue(msg) {
+  const base = chrome.runtime.getManifest().homepage_url + '/issues/new';
+  if (typeof msg.url !== 'string' || !msg.url.startsWith(base)) return { ok: false };
+  await chrome.tabs.create({ url: msg.url });
   return { ok: true };
 }
 

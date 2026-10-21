@@ -214,6 +214,9 @@
             <button class="btn js-newgame" data-i18n="new_game"></button>
             <button class="btn js-forget" data-i18n="forget"></button>
           </div>
+          <div class="row">
+            <button class="btn js-report" data-i18n="report"></button>
+          </div>
           <div class="colors js-colors"></div>
           <div class="note" data-i18n="note_calibration"></div>
           <div class="note" data-i18n="note_keys"></div>
@@ -355,7 +358,48 @@
     translate();
     scan();
   };
+  $('.js-report').onclick = () => report();
   $('.js-copy').onclick = () => { if (game.fen) navigator.clipboard.writeText(game.fen).then(() => say('ok', () => t('copied'))); };
+
+  async function report() {
+    const manifest = chrome.runtime.getManifest();
+    const brands = navigator.userAgentData
+      ? navigator.userAgentData.brands.filter(b => !/not.a.brand/i.test(b.brand)).map(b => `${b.brand} ${b.version}`).join(', ')
+      : navigator.userAgent;
+    const r = view.rect, c = view.colors;
+    const unsure = view.conf ? view.conf.map((v, i) => (v < 0.25 ? CU.sqName(CU.boardToScreen(i, game.whiteBottom)) : null)).filter(Boolean) : [];
+    const diagnostics = [
+      `version: ${manifest.version}`,
+      `browser: ${brands}`,
+      `user agent: ${navigator.userAgent}`,
+      `site: ${location.host}`,
+      `viewport: ${innerWidth}x${innerHeight} @${devicePixelRatio}`,
+      `board: ${r ? [r.x, r.y, r.w, r.h].map(Math.round).join(', ') : 'not found'}`,
+      `colours: ${c ? `light ${c.light} / dark ${c.dark}` : '-'}`,
+      `level: ${settings.mate ? 'mate' : settings.level}, side: ${settings.side}, orientation: ${settings.orient}, white at the bottom: ${game.whiteBottom}`,
+      `status: ${els.status.textContent}`,
+      `fen: ${game.fen || '-'}`,
+      `uncertain squares: ${view.conf ? unsure.join(' ') || 'none' : '-'}`,
+    ].join('\n');
+    const url = new URL(manifest.homepage_url + '/issues/new');
+    url.searchParams.set('template', 'bug_report.yml');
+    url.searchParams.set('version', manifest.version);
+    url.searchParams.set('browser', brands);
+    url.searchParams.set('site', location.host);
+    if (game.fen) url.searchParams.set('fen', game.fen);
+    url.searchParams.set('diagnostics', diagnostics);
+    let copied = false;
+    try {
+      const shot = await send({ type: 'snapshot' });
+      if (shot && shot.ok) {
+        const bytes = Uint8Array.from(atob(shot.png), ch => ch.charCodeAt(0));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes], { type: 'image/png' }) })]);
+        copied = true;
+      }
+    } catch {}
+    await send({ type: 'openIssue', url: url.toString() });
+    say('ok', () => t(copied ? 'report_ready' : 'report_no_image'));
+  }
 
   function showPanel() { panel.hidden = false; drawArrows(); renderEvalBar(); }
 

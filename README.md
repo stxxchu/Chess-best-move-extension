@@ -1,5 +1,7 @@
 # Chess Hints
 
+[![Download](https://img.shields.io/badge/Download-chess--hints.zip-2ea44f?style=for-the-badge)](https://github.com/stxxchu/Chess-best-move-extension/releases/latest/download/chess-hints.zip) [![Latest version](https://img.shields.io/github/v/release/stxxchu/Chess-best-move-extension?style=for-the-badge&label=version&color=555)](https://github.com/stxxchu/Chess-best-move-extension/releases/latest)
+
 [Polski](README.pl.md)
 
 A browser extension for Brave, Chrome and Edge. It finds the chessboard on your screen, reads the position and suggests moves at the level you choose, from the best to the worst. Stockfish 19 runs locally in the browser; nothing is sent anywhere.
@@ -23,7 +25,7 @@ A browser extension for Brave, Chrome and Edge. It finds the chessboard on your 
 
 ## Install
 
-1. Open the [latest release](../../releases/latest) and under **Assets** download **`chess-hints-x.y.z.zip`**. Not “Source code”: that is the whole repository and the extension sits in its `extension` subfolder.
+1. Click **Download** at the top of this page (or get **`chess-hints.zip`** from the [latest release](../../releases/latest)). Not “Source code”: that is the whole repository and the extension sits in its `extension` subfolder.
 2. Unzip it. The folder you get has `manifest.json` directly inside.
 3. Open `brave://extensions` (or `chrome://extensions`) and turn on **Developer mode**.
 4. Click **Load unpacked** and pick that folder.
@@ -88,6 +90,10 @@ Turn off piece animation in the site's settings for the fastest results. Chrome 
 | `extension/engine.js`, `offscreen.js` | Stockfish 19 lite (WASM) in a Web Worker, MultiPV with live updates. |
 | `extension/chessutil.js` | FEN, check detection, castling, en passant, move notation, move grading and marks. |
 | `extension/content.js`, `i18n.js` | Panel, arrows, evaluation bar, Auto mode, translations. |
+
+## Something wrong?
+
+Open the panel settings and click **Report a problem**. It opens a GitHub issue with the version, browser, site, position and diagnostics already filled in, and copies an image of the board to the clipboard so you can paste it into the report.
 
 ## Development
 

@@ -1,5 +1,7 @@
 # Chess Hints
 
+[![Pobierz](https://img.shields.io/badge/Pobierz-chess--hints.zip-2ea44f?style=for-the-badge)](https://github.com/stxxchu/Chess-best-move-extension/releases/latest/download/chess-hints.zip) [![Najnowsza wersja](https://img.shields.io/github/v/release/stxxchu/Chess-best-move-extension?style=for-the-badge&label=wersja&color=555)](https://github.com/stxxchu/Chess-best-move-extension/releases/latest)
+
 [English](README.md)
 
 Rozszerzenie do Brave, Chrome i Edge. Znajduje szachownicę na ekranie, rozpoznaje pozycję i podpowiada ruchy na wybranym poziomie, od najlepszych po najgorsze. Stockfish 19 działa lokalnie w przeglądarce, nic nie jest nigdzie wysyłane.
@@ -23,7 +25,7 @@ Rozszerzenie do Brave, Chrome i Edge. Znajduje szachownicę na ekranie, rozpozna
 
 ## Instalacja
 
-1. Otwórz [najnowsze wydanie](../../releases/latest) i w sekcji **Assets** pobierz **`chess-hints-x.y.z.zip`**. Nie „Source code”: to całe repozytorium, a wtyczka jest w jego podfolderze `extension`.
+1. Kliknij **Pobierz** na górze tej strony (albo weź **`chess-hints.zip`** z [najnowszego wydania](../../releases/latest)). Nie „Source code”: to całe repozytorium, a wtyczka jest w jego podfolderze `extension`.
 2. Rozpakuj. W rozpakowanym folderze `manifest.json` jest od razu w środku.
 3. Otwórz `brave://extensions` (albo `chrome://extensions`) i włącz **Tryb dewelopera**.
 4. Kliknij **Załaduj rozpakowane** i wskaż ten folder.
@@ -78,6 +80,10 @@ Czas od ruchu przeciwnika do pierwszych strzałek (`npm run bench`):
 | animacja figur włączona | ok. 300 ms, z czego ok. 200 ms to sama animacja |
 
 Najszybciej działa przy wyłączonej animacji ruchu figur w ustawieniach strony. Chrome pozwala na dwa zrzuty karty na sekundę, więc przy bardzo szybkiej wymianie ruchów skan może chwilę poczekać.
+
+## Coś nie działa?
+
+W ustawieniach panelu kliknij **Zgłoś problem**. Otworzy się zgłoszenie na GitHubie z wypełnioną wersją, przeglądarką, stroną, pozycją i diagnostyką, a obraz planszy trafi do schowka, żeby wkleić go do zgłoszenia.
 
 ## Rozwój
 

@@ -110,6 +110,29 @@ try {
   s = await readUi(page);
   check(s && !s.onboard, 'getting started card can be dismissed');
 
+  await browser.defaultBrowserContext().overridePermissions('http://127.0.0.1:8766', ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
+  const issueTarget = browser.waitForTarget(t => t.url().includes('/issues/new'), { timeout: 10000 });
+  await panelDo(page, 'click', '.js-report');
+  const issueTab = await issueTarget;
+  const issue = new URL(issueTab.url());
+  const version = JSON.parse(fs.readFileSync(path.join(extPath, 'manifest.json'), 'utf8')).version;
+  await (await issueTab.page())?.close();
+  await page.bringToFront();
+  check(issue.pathname === '/stxxchu/Chess-best-move-extension/issues/new' && issue.searchParams.get('template') === 'bug_report.yml' &&
+    issue.searchParams.get('version') === version && (issue.searchParams.get('fen') || '').startsWith('rnbqkbnr/') &&
+    /fen: rnbqkbnr\//.test(issue.searchParams.get('diagnostics') || ''), 'Report a problem opens a pre-filled bug report on GitHub');
+  const clip = await page.evaluate(async () => (await navigator.clipboard.read()).flatMap(i => i.types)).catch(e => 'error: ' + e.message);
+  s = await readUi(page);
+  check(Array.isArray(clip) && clip.includes('image/png') && /board image is in the clipboard/.test(s.status), 'the board image is copied to the clipboard: ' + JSON.stringify(clip));
+  const clipPng = await page.evaluate(async () => {
+    const [item] = await navigator.clipboard.read();
+    const bytes = new Uint8Array(await (await item.getType('image/png')).arrayBuffer());
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  }).catch(() => null);
+  if (clipPng) fs.writeFileSync(path.join(shotDir, 'e2e_report_clipboard.png'), Buffer.from(clipPng, 'base64'));
+
   const MAX_TIER = { best: 5, excellent: 1, good: 2, ok: 3 };
   for (const level of ['best', 'excellent', 'good', 'ok']) {
     await clickLevel(page, level);

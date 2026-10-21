@@ -1,0 +1,48 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The quickest way to fill this in is **Settings → Report a problem** in the Chess Hints panel: it fills in the fields below and copies an image of the board to the clipboard.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect and what did you see instead?
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: An image of the board helps a lot with recognition problems. Paste it here with Ctrl+V or drag a file in.
+  - type: input
+    id: version
+    attributes:
+      label: Chess Hints version
+      placeholder: "1.5.0"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: "Brave 1.71, Chrome 131, Edge 131"
+    validations:
+      required: true
+  - type: input
+    id: site
+    attributes:
+      label: Website and board theme
+      placeholder: "chess.com, green board, Neo pieces"
+  - type: input
+    id: fen
+    attributes:
+      label: Position (FEN from the panel)
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      render: text

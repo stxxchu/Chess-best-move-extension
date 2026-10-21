@@ -153,6 +153,22 @@ t('negate', () => {
   assert.deepEqual(CU.negate({ mate: 2 }), { mate: -2 });
 });
 
+t('mistakes and blunders are only suggested on the worst level', () => {
+  const g = CU.annotate(start, CU.grade(lines(['e2e4', { mate: 1 }], ['d2d4', -300], ['c2c4', -400])));
+  assert.deepEqual(CU.pickForLevel(g, 'best').map(l => l.move), ['e2e4']);
+  for (const lv of ['excellent', 'good', 'ok']) {
+    assert.deepEqual(CU.withAlternative(CU.pickForLevel(g, lv), g).map(l => l.move), ['e2e4'], lv);
+  }
+  assert.deepEqual(CU.pickForLevel(g, 'worst').map(l => l.move), ['c2c4', 'd2d4', 'e2e4']);
+});
+
+t('fourth arrow needs three marked picks and a playable alternative', () => {
+  const g = CU.annotate(start, CU.grade(lines(['e2e4', 30], ['d2d4', 29], ['c2c4', 28], ['g1f3', -300])));
+  const picks = CU.pickForLevel(g, 'best');
+  assert.ok(picks.length === 3 && picks.every(l => l.mark));
+  assert.equal(CU.withAlternative(picks, g).length, 3);
+});
+
 t('formatLine and formatScore', () => {
   assert.deepEqual(CU.formatLine(start, ['e2e4', 'e7e5', 'g1f3', 'b8c6']), ['e2–e4', 'e7–e5', '♘g1–f3', '♞b8–c6']);
   assert.equal(CU.formatScore({ cp: 35 }), '+0.35');

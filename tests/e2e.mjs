@@ -37,6 +37,7 @@ const readUi = p => p.evaluate(() => {
   const bar = root.querySelector('.evalbar');
   return {
     status: root.querySelector('.js-status').textContent,
+    notice: root.querySelector('.js-notice').hidden ? '' : root.querySelector('.js-notice').textContent,
     moves: items.map(li => li.querySelector('.mv').firstChild.textContent + ' ' + li.querySelector('.ev').textContent),
     tags: items.map(li => li.querySelector('.tag').textContent),
     extra: items.map(li => li.classList.contains('extra')),
@@ -215,6 +216,19 @@ try {
   await page.evaluate(() => window.cg.set({ fen: '6k1/5ppp/8/8/8/8/5PPP/3R2K1', lastMove: undefined }));
   s = await waitFor(page, s => final(s) && s.fen.startsWith('6k1/5ppp/8/8/8/8/5PPP/3R2K1'));
   check(s && s.moves[0].startsWith('♖d1–d8#') && /M1/.test(s.moves[0]), 'only sensible move (mate in one) shown on the Good level');
+
+  await page.evaluate(() => window.cg.set({ fen: '3k4/8/8/8/8/8/3q4/R3K3', lastMove: undefined }));
+  s = await waitFor(page, s => final(s) && s.fen.startsWith('3k4/8/8/8/8/8/3q4/R3K3'));
+  for (const level of ['best', 'excellent', 'good', 'ok']) {
+    await clickLevel(page, level);
+    const st = await readUi(page);
+    check(st.moves.length === 1 && st.moves[0].startsWith('♔e1×d2') && /only one sensible move/i.test(st.notice) && !st.tags.some(t => /Mistake|Blunder/.test(t)),
+      `forced position, level ${level}: only the saving move, a notice explains it, no blunder suggested: ${st.moves.join(" ")} [${st.tags.join(", ")}] ${st.notice}`);
+  }
+  await clickLevel(page, 'worst');
+  s = await waitFor(page, s => final(s) && /Worst/.test(s.status));
+  check(s && s.tags[0] === 'Blunder' && !s.notice, 'the blunder shows up on the Worst level only');
+  await clickLevel(page, 'good');
 
   await page.goto('http://127.0.0.1:8766/board.html?lib=' + encodeURIComponent('cm+green+staunty') + '&size=600&fen=' +
     encodeURIComponent('r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4'), { waitUntil: 'networkidle0' });

@@ -54,7 +54,7 @@ Silnik ocenia 12 najlepszych kandydatów. Każdy ruch dostaje kategorię według
 | Przeciętne | strata 5–10% |
 | Najgorsze | najsłabsze ruchy w pozycji (silnik sprawdza wtedy wszystkie legalne ruchy) |
 
-Zmiana poziomu działa od razu, poza przejściem na „Najgorsze” i z powrotem. Jeśli na danym poziomie nie ma trzech ruchów, lista jest uzupełniana lepszymi, nigdy gorszymi.
+Zmiana poziomu działa od razu, poza przejściem na „Najgorsze” i z powrotem. Jeśli na danym poziomie nie ma trzech ruchów, lista jest uzupełniana lepszymi, nigdy gorszymi, i panel o tym informuje. Pomyłki i błędy pojawiają się wyłącznie na poziomie „Najgorsze”, więc w pozycji z jednym ratującym ruchem pozostałe poziomy pokazują tylko ten ruch.
 
 Oznaczenia `!!` i `!` są przybliżeniem, bo chess.com nie publikuje swoich zasad. Tutaj „Genialny” to poświęcenie figury, które jest najlepszym lub prawie najlepszym ruchem, a „Świetny” to jedyny dobry ruch w pozycji.
 

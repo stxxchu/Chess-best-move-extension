@@ -275,19 +275,27 @@
     });
   }
 
+  const PLAYABLE = 0.10;
+
   function pickForLevel(graded, levelId, n = 3) {
     const level = LEVELS.find(l => l.id === levelId) || LEVELS[0];
     const byLoss = [...graded].sort((a, b) => a.loss - b.loss || strength(b.score) - strength(a.score));
     if (level.id === 'worst') return byLoss.reverse().slice(0, n);
-    if (level.lo === undefined) return byLoss.slice(0, n);
-    const inBand = byLoss.filter(l => l.loss > level.lo && l.loss <= level.hi);
-    const better = byLoss.filter(l => l.loss <= level.lo).reverse();
+    const playable = byLoss.filter(l => l.loss <= PLAYABLE);
+    if (level.lo === undefined) return playable.slice(0, n);
+    const inBand = playable.filter(l => l.loss > level.lo && l.loss <= level.hi);
+    const better = playable.filter(l => l.loss <= level.lo).reverse();
     return [...inBand, ...better].slice(0, n);
   }
 
+  function inLevel(line, levelId) {
+    const level = LEVELS.find(l => l.id === levelId);
+    return !level || level.lo === undefined || (line.loss > level.lo && line.loss <= level.hi);
+  }
+
   function withAlternative(picks, graded) {
-    if (!picks.length || !picks.every(l => l.mark)) return picks;
-    const alt = [...graded].sort((a, b) => a.loss - b.loss).find(l => !l.mark && !picks.includes(l));
+    if (picks.length < 3 || !picks.every(l => l.mark)) return picks;
+    const alt = [...graded].sort((a, b) => a.loss - b.loss).find(l => !l.mark && !picks.includes(l) && l.loss <= PLAYABLE);
     return alt ? [...picks, { ...alt, extra: true }] : picks;
   }
 
@@ -295,7 +303,7 @@
     START, GLYPH, TIERS, MARKS, LEVELS, isWhite, sqName, sqIndex, fromFen, placementFen, screenToBoard, boardToScreen,
     attackers, attacked, inCheck, validate, isStart, inferMover, inferEnPassant, castling, guessWhiteBottom,
     applyMove, formatMove, formatLine, formatScore, expectedScore, negate, grade, hanging, isSacrifice, annotate,
-    pickForLevel, withAlternative,
+    pickForLevel, inLevel, withAlternative,
   };
   root.ChessUtil = api;
   if (typeof module === 'object' && module.exports) module.exports = api;

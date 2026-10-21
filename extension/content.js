@@ -14,7 +14,7 @@
   const game = { prev: null, lost: {}, stm: null, stmKnown: false, ep: '-', whiteBottom: true, fen: null, lastTo: -1, oneOff: 0 };
   const view = {
     rect: null, manualRect: null, grid: null, conf: null, board: null, colors: null, lines: null, analysis: null, job: null,
-    status: null, done: null, busy: false, pending: null, lastScan: 0, scanMs: 0, evalScore: null, evalFresh: false, picking: -1,
+    status: null, done: null, notice: null, busy: false, pending: null, lastScan: 0, scanMs: 0, evalScore: null, evalFresh: false, picking: -1,
   };
   let palette = ['#16a34a', '#2563eb', '#f97316', '#7c3aed'];
   let seq = 0;
@@ -71,6 +71,7 @@
   .tag { font: 600 10px system-ui, sans-serif; padding: 2px 6px; border-radius: 10px; color: #fff; background: var(--t); margin-left: 6px; vertical-align: 3px; letter-spacing: .2px; white-space: nowrap; }
   .status { font-size: 12px; color: var(--soft); min-height: 17px; }
   .status.warn { color: var(--warn); } .status.err { color: var(--err); } .status.ok { color: var(--ok); }
+  .notice { font-size: 12px; color: var(--warn); background: rgba(245,158,11,.12); border-radius: 8px; padding: 6px 9px; }
   .moves { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .moves li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center;
     background: var(--card); border-radius: 8px; padding: 7px 9px; border-left: 4px solid var(--c); }
@@ -165,6 +166,7 @@
       <div class="levels js-levels"></div>
       <div class="lvl-hint js-lvl-hint"></div>
       <div class="status js-status"></div>
+      <div class="notice js-notice" hidden></div>
       <ol class="moves js-moves"></ol>
       <div class="mini-wrap js-mini-wrap" hidden>
         <div class="mini js-mini"></div>
@@ -219,7 +221,7 @@
   const $ = sel => shadow.querySelector(sel);
   const panel = $('.panel'), svg = $('svg.arrows'), selector = $('.selector'), evalBar = $('.evalbar');
   const els = {
-    status: $('.js-status'), moves: $('.js-moves'), miniWrap: $('.js-mini-wrap'), mini: $('.js-mini'), picker: $('.js-picker'),
+    status: $('.js-status'), notice: $('.js-notice'), moves: $('.js-moves'), miniWrap: $('.js-mini-wrap'), mini: $('.js-mini'), picker: $('.js-picker'),
     fen: $('.js-fen'), auto: $('.js-auto'), side: $('.js-side'), orient: $('.js-orient'), movetime: $('.js-movetime'),
     mt: $('.js-mt'), arrows: $('.js-arrows'), evalBar: $('.js-evalbar'), lang: $('.js-lang'), theme: $('.js-theme'),
     colors: $('.js-colors'), select: $('.js-select'), levels: $('.js-levels'), lvlHint: $('.js-lvl-hint'), onboard: $('.js-onboard'),
@@ -619,14 +621,16 @@
     let picks = CU.pickForLevel(a.all, level.id, 3);
     if (!level.all) picks = CU.withAlternative(picks, a.all);
     view.lines = picks;
+    const name = () => t('level_' + level.id);
+    const own = picks.some(l => !l.extra && CU.inLevel(l, level.id));
+    view.notice = level.all ? null : picks.length === 1 ? () => t('only_move') : !own ? () => t('level_none', name()) : null;
     renderMoves();
     drawArrows();
     renderMini();
     renderEvalBar();
-    const name = () => t('level_' + level.id);
     if (!a.job.final) { say('', () => t('thinking_more', name(), a.depth)); return; }
     const assumed = !game.stmKnown;
-    const filled = level.lo !== undefined && picks.some(l => !l.extra && l.loss <= level.lo);
+    const filled = !view.notice && level.lo !== undefined && picks.some(l => !l.extra && l.loss <= level.lo);
     const scanMs = view.scanMs;
     finish('ok', () => [
       name(), t('depth', a.depth), t('to_move', sideName(a.job.stm)) + (assumed ? t('assumed') : ''), t('scan_ms', scanMs),
@@ -684,10 +688,16 @@
     renderMini();
   }
 
-  function clearMoves() { els.moves.textContent = ''; }
+  function clearMoves() {
+    els.moves.textContent = '';
+    view.notice = null;
+    els.notice.hidden = true;
+  }
 
   function renderMoves() {
     els.moves.textContent = '';
+    els.notice.hidden = !view.notice;
+    if (view.notice) els.notice.textContent = view.notice();
     (view.lines || []).forEach((l, k) => {
       const li = document.createElement('li');
       li.style.setProperty('--c', palette[k]);

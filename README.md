@@ -54,7 +54,7 @@ The engine evaluates the 12 best candidate moves. Each one is graded by how many
 | Average | 5–10% loss |
 | Worst | the weakest moves in the position (the engine checks every legal move) |
 
-Switching levels is instant, except for going to and from Worst. If a position has fewer than three moves at a level, the list is filled with better moves, never worse ones.
+Switching levels is instant, except for going to and from Worst. If a position has fewer than three moves at a level, the list is filled with better moves, never worse ones, and a note says so. Mistakes and blunders are only ever shown on the Worst level, so in a position with a single saving move every other level shows just that move.
 
 The `!!` and `!` marks are an approximation. chess.com does not publish its rules: here Brilliant means a piece sacrifice that is the best or nearly the best move, and Great means the only good move in the position.
 

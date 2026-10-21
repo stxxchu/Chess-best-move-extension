@@ -299,11 +299,60 @@
     return alt ? [...picks, { ...alt, extra: true }] : picks;
   }
 
+  function kingZone(sq) {
+    const r = sq >> 3, c = sq & 7, out = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const rr = r + dr, cc = c + dc;
+        if (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) out.push(rr * 8 + cc);
+      }
+    }
+    return out;
+  }
+
+  function escapeSquares(board, white) {
+    const k = board.indexOf(white ? 'K' : 'k');
+    if (k < 0) return 0;
+    const without = [...board];
+    without[k] = '.';
+    return kingZone(k).filter(sq => sq !== k && (board[sq] === '.' || isWhite(board[sq]) !== white) && !attacked(without, sq, !white)).length;
+  }
+
+  function attackScore(board, uci) {
+    const from = sqIndex(uci.slice(0, 2)), to = sqIndex(uci.slice(2, 4));
+    const white = isWhite(board[from]);
+    const king = board.indexOf(white ? 'k' : 'K');
+    if (king < 0) return 0;
+    const after = applyMove(board, uci);
+    const dist = (a, b) => Math.max(Math.abs((a >> 3) - (b >> 3)), Math.abs((a & 7) - (b & 7)));
+    const pressure = kingZone(king).filter(sq => attacked(after, sq, white)).length;
+    const squeeze = escapeSquares(board, !white) - escapeSquares(after, !white);
+    return 3 * (inCheck(after, !white) ? 1 : 0) + pressure + 1.5 * squeeze + 0.5 * (dist(from, king) - dist(to, king));
+  }
+
+  function pickMateMode(graded, board, n = 3) {
+    const mates = graded.filter(l => l.score.mate > 0).sort((a, b) => a.score.mate - b.score.mate);
+    if (mates.length) return { kind: 'mate', mateIn: mates[0].score.mate, picks: mates.slice(0, n) };
+    const best = [...graded].sort((a, b) => a.loss - b.loss)[0];
+    if (best && best.score.mate < 0) return { kind: 'defend', mateIn: -best.score.mate, picks: pickForLevel(graded, 'best', n) };
+    const attacks = graded.filter(l => l.loss <= PLAYABLE)
+      .map(l => ({ ...l, attack: attackScore(board, l.move) }))
+      .sort((a, b) => b.attack - a.attack || a.loss - b.loss);
+    return { kind: 'attack', picks: attacks.slice(0, n) };
+  }
+
+  function formatSequence(board, pv, mateIn) {
+    const plies = 2 * mateIn - 1;
+    const moves = formatLine(board, pv, plies);
+    if (moves.length === plies) moves[plies - 1] = moves[plies - 1].replace(/\+?$/, '#');
+    return moves.map((m, i) => (i % 2 ? m : `${i / 2 + 1}. ${m}`)).join(' ');
+  }
+
   const api = {
     START, GLYPH, TIERS, MARKS, LEVELS, isWhite, sqName, sqIndex, fromFen, placementFen, screenToBoard, boardToScreen,
     attackers, attacked, inCheck, validate, isStart, inferMover, inferEnPassant, castling, guessWhiteBottom,
     applyMove, formatMove, formatLine, formatScore, expectedScore, negate, grade, hanging, isSacrifice, annotate,
-    pickForLevel, inLevel, withAlternative,
+    pickForLevel, inLevel, withAlternative, attackScore, pickMateMode, formatSequence,
   };
   root.ChessUtil = api;
   if (typeof module === 'object' && module.exports) module.exports = api;

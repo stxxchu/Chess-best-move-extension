@@ -9,12 +9,12 @@
   const SCAN_ERRORS = ['no-board', 'partial', 'needs-calibration', 'not-start', 'mismatch'];
   const settings = {
     side: 'bottom', orient: 'auto', movetime: 2000, arrows: true, evalBar: true, auto: false, pos: null,
-    min: false, compact: false, level: 'good', lang: 'auto', theme: 'dark', onboarded: false,
+    min: false, compact: false, level: 'good', mate: false, lang: 'auto', theme: 'dark', onboarded: false,
   };
   const game = { prev: null, lost: {}, stm: null, stmKnown: false, ep: '-', whiteBottom: true, fen: null, lastTo: -1, oneOff: 0 };
   const view = {
     rect: null, manualRect: null, grid: null, conf: null, board: null, colors: null, lines: null, analysis: null, job: null,
-    status: null, done: null, notice: null, busy: false, pending: null, lastScan: 0, scanMs: 0, evalScore: null, evalFresh: false, picking: -1,
+    status: null, done: null, notice: null, noticeKind: 'warn', mate: null, busy: false, pending: null, lastScan: 0, scanMs: 0, evalScore: null, evalFresh: false, picking: -1,
   };
   let palette = ['#16a34a', '#2563eb', '#f97316', '#7c3aed'];
   let seq = 0;
@@ -72,6 +72,10 @@
   .status { font-size: 12px; color: var(--soft); min-height: 17px; }
   .status.warn { color: var(--warn); } .status.err { color: var(--err); } .status.ok { color: var(--ok); }
   .notice { font-size: 12px; color: var(--warn); background: rgba(245,158,11,.12); border-radius: 8px; padding: 6px 9px; }
+  .notice.info { color: var(--soft); background: var(--card); }
+  .sequence { font-size: 12px; background: var(--card); border-radius: 8px; padding: 7px 9px; color: var(--fg); line-height: 1.5; border-left: 4px solid #be123c; }
+  .levels.dimmed { opacity: .45; }
+  .mate-banner { position: fixed; transform: translateX(-50%); background: rgba(190,18,60,.92); color: #fff; font: 800 18px system-ui, sans-serif; padding: 6px 14px; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.35); pointer-events: none; z-index: 2147483646; letter-spacing: .3px; white-space: nowrap; }
   .moves { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .moves li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center;
     background: var(--card); border-radius: 8px; padding: 7px 9px; border-left: 4px solid var(--c); }
@@ -147,6 +151,7 @@
   wrap.innerHTML = `
   <svg class="arrows" viewBox="0 0 8 8" preserveAspectRatio="none"></svg>
   <div class="evalbar" hidden><div class="fill"></div><span class="val"></span></div>
+  <div class="mate-banner" hidden></div>
   <div class="panel" hidden>
     <div class="head"><span class="logo">♞</span><b>Chess Hints</b>
       <button class="icon js-compact" data-i18n-title="compact">▤</button>
@@ -161,12 +166,14 @@
       <div class="row">
         <button class="btn primary js-scan"><span data-i18n="scan"></span> <kbd>Alt+Shift+S</kbd></button>
         <label class="switch" data-i18n-title="auto_title"><input type="checkbox" class="js-auto"> <span data-i18n="auto"></span></label>
+        <label class="switch" data-i18n-title="mate_title"><input type="checkbox" class="js-mate"> <span data-i18n="mate"></span></label>
       </div>
       <div class="lvl-title" data-i18n="level_title"></div>
       <div class="levels js-levels"></div>
       <div class="lvl-hint js-lvl-hint"></div>
       <div class="status js-status"></div>
       <div class="notice js-notice" hidden></div>
+      <div class="sequence js-sequence" hidden></div>
       <ol class="moves js-moves"></ol>
       <div class="mini-wrap js-mini-wrap" hidden>
         <div class="mini js-mini"></div>
@@ -219,9 +226,9 @@
   document.documentElement.appendChild(host);
 
   const $ = sel => shadow.querySelector(sel);
-  const panel = $('.panel'), svg = $('svg.arrows'), selector = $('.selector'), evalBar = $('.evalbar');
+  const panel = $('.panel'), svg = $('svg.arrows'), selector = $('.selector'), evalBar = $('.evalbar'), banner = $('.mate-banner');
   const els = {
-    status: $('.js-status'), notice: $('.js-notice'), moves: $('.js-moves'), miniWrap: $('.js-mini-wrap'), mini: $('.js-mini'), picker: $('.js-picker'),
+    status: $('.js-status'), notice: $('.js-notice'), sequence: $('.js-sequence'), mate: $('.js-mate'), moves: $('.js-moves'), miniWrap: $('.js-mini-wrap'), mini: $('.js-mini'), picker: $('.js-picker'),
     fen: $('.js-fen'), auto: $('.js-auto'), side: $('.js-side'), orient: $('.js-orient'), movetime: $('.js-movetime'),
     mt: $('.js-mt'), arrows: $('.js-arrows'), evalBar: $('.js-evalbar'), lang: $('.js-lang'), theme: $('.js-theme'),
     colors: $('.js-colors'), select: $('.js-select'), levels: $('.js-levels'), lvlHint: $('.js-lvl-hint'), onboard: $('.js-onboard'),
@@ -240,6 +247,7 @@
   const overlaps = (a, b) => a && b && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
   const sideName = s => t(s === 'w' ? 'white' : 'black');
   const currentLevel = () => CU.LEVELS.find(l => l.id === settings.level) || CU.LEVELS[2];
+  const wantsAll = () => !settings.mate && !!currentLevel().all;
   const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 
   chrome.storage.local.get('settings').then(({ settings: s }) => {
@@ -262,6 +270,8 @@
     els.arrows.checked = settings.arrows;
     els.evalBar.checked = settings.evalBar;
     els.auto.checked = settings.auto;
+    els.mate.checked = settings.mate;
+    els.levels.classList.toggle('dimmed', settings.mate);
     els.lang.value = settings.lang;
     els.theme.value = settings.theme;
     els.onboard.hidden = settings.onboarded;
@@ -280,13 +290,14 @@
       b.textContent = t('level_' + b.dataset.level);
       b.title = t('level_' + b.dataset.level + '_hint');
     }
-    els.lvlHint.textContent = t('level_' + settings.level + '_hint');
+    els.lvlHint.textContent = t(settings.mate ? 'mate_hint' : 'level_' + settings.level + '_hint');
     els.select.textContent = t(view.manualRect ? 'auto_detect' : 'select_board');
     if (!view.status) view.status = { kind: '', fn: () => t('idle') };
     renderStatus();
     renderColors();
     renderMoves();
     renderMini();
+    renderBanner();
   }
 
   function applyTheme() {
@@ -296,11 +307,21 @@
 
   function setLevel(id) {
     settings.level = id;
+    settings.mate = false;
+    applyMode();
+  }
+
+  function toggleMate() {
+    settings.mate = !settings.mate;
+    applyMode();
+  }
+
+  function applyMode() {
     saveSettings();
     syncControls();
     const job = view.job;
     if (!job) return;
-    if (!!currentLevel().all !== job.all) rerun();
+    if (wantsAll() !== job.all) rerun();
     else showLevel();
   }
 
@@ -311,6 +332,7 @@
   els.arrows.onchange = () => { settings.arrows = els.arrows.checked; saveSettings(); drawArrows(); };
   els.evalBar.onchange = () => { settings.evalBar = els.evalBar.checked; saveSettings(); renderEvalBar(); };
   els.auto.onchange = () => { settings.auto = els.auto.checked; if (settings.auto) scan(); };
+  els.mate.onchange = () => { if (els.mate.checked !== settings.mate) toggleMate(); };
   els.lang.onchange = () => { settings.lang = els.lang.value; saveSettings(); translate(); };
   els.theme.onchange = () => { settings.theme = els.theme.value; saveSettings(); applyTheme(); };
 
@@ -436,10 +458,10 @@
       const t0 = performance.now();
       const pr = panel.getBoundingClientRect();
       const hidePanelToo = !panel.hidden && overlaps({ x: pr.left, y: pr.top, w: pr.width, h: pr.height }, view.manualRect || view.rect);
-      const arrowsShown = svg.style.display !== 'none' && svg.childElementCount > 0;
-      if (arrowsShown) svg.style.visibility = 'hidden';
+      const overlayShown = (svg.style.display !== 'none' && svg.childElementCount > 0) || !banner.hidden;
+      if (overlayShown) { svg.style.visibility = 'hidden'; banner.style.visibility = 'hidden'; }
       if (hidePanelToo) panel.style.visibility = 'hidden';
-      if (arrowsShown || hidePanelToo) await nextFrame();
+      if (overlayShown || hidePanelToo) await nextFrame();
       let res;
       try {
         res = await send({
@@ -448,6 +470,7 @@
         });
       } finally {
         svg.style.visibility = '';
+        banner.style.visibility = '';
         panel.style.visibility = '';
       }
       view.scanMs = Math.round(performance.now() - t0);
@@ -560,9 +583,8 @@
   }
 
   async function analyze(fen, board, stm) {
-    const level = currentLevel();
-    const job = { seq: ++seq, fen, board, stm, all: !!level.all, final: false };
-    Object.assign(view, { job, analysis: null, lines: null, done: null });
+    const job = { seq: ++seq, fen, board, stm, all: wantsAll(), final: false };
+    Object.assign(view, { job, analysis: null, lines: null, done: null, mate: null });
     clearArrows();
     clearMoves();
     say('', () => t('thinking', sideName(stm)));
@@ -599,12 +621,19 @@
     return line.score.mate === 1 ? text.replace(/\+$/, '') + '#' : text;
   }
 
+  function continuation(board, line) {
+    const moves = CU.formatLine(CU.applyMove(board, line.move), line.pv.slice(1), 5);
+    const mateEnd = line.score.mate > 0 && line.pv.length === 2 * line.score.mate - 1 && moves.length === line.pv.length - 1;
+    if (mateEnd && moves.length) moves[moves.length - 1] = moves[moves.length - 1].replace(/\+?$/, '#');
+    return moves.join('  ');
+  }
+
   function present(job, lines, depth) {
     if (!lines.length) return;
     const all = CU.annotate(job.board, CU.grade(lines), game.lastTo).map(l => ({
       ...l,
       text: moveText(job.board, l),
-      cont: CU.formatLine(CU.applyMove(job.board, l.move), l.pv.slice(1), 5).join('  '),
+      cont: continuation(job.board, l),
       eval: CU.formatScore(l.score),
     }));
     view.analysis = { job, all, depth };
@@ -616,8 +645,11 @@
   function showLevel() {
     const a = view.analysis;
     if (!a) return;
+    if (wantsAll() !== a.job.all) { rerun(); return; }
+    if (settings.mate) { showMate(a); return; }
     const level = currentLevel();
-    if (!!level.all !== a.job.all) { rerun(); return; }
+    view.mate = null;
+    view.noticeKind = 'warn';
     let picks = CU.pickForLevel(a.all, level.id, 3);
     if (!level.all) picks = CU.withAlternative(picks, a.all);
     view.lines = picks;
@@ -638,6 +670,25 @@
     ].join(' · '));
   }
 
+  function showMate(a) {
+    const res = CU.pickMateMode(a.all, a.job.board);
+    view.lines = res.picks.map(l => ({ ...l, kind: res.kind }));
+    view.mate = res.kind === 'mate' ? { mateIn: res.mateIn, sequence: CU.formatSequence(a.job.board, res.picks[0].pv, res.mateIn) } : null;
+    view.notice = res.kind === 'attack' ? () => t('no_mate') : res.kind === 'defend' ? () => t('mate_threat', res.mateIn) : null;
+    view.noticeKind = res.kind === 'attack' ? 'info' : 'warn';
+    renderMoves();
+    drawArrows();
+    renderMini();
+    renderEvalBar();
+    if (!a.job.final) { say('', () => t('thinking_more', t('mate'), a.depth)); return; }
+    const assumed = !game.stmKnown;
+    const scanMs = view.scanMs;
+    finish(res.kind === 'defend' ? 'warn' : 'ok', () => [
+      res.kind === 'mate' ? t('mate_in', res.mateIn) : t('mate'), t('depth', a.depth),
+      t('to_move', sideName(a.job.stm)) + (assumed ? t('assumed') : ''), t('scan_ms', scanMs),
+    ].join(' · '));
+  }
+
   function rerun() {
     const job = view.job;
     if (job) analyze(job.fen, job.board, job.stm);
@@ -652,7 +703,7 @@
 
   function resetGame() {
     Object.assign(game, { prev: null, lost: {}, stm: null, stmKnown: false, ep: '-', fen: null, lastTo: -1, oneOff: 0 });
-    Object.assign(view, { job: null, lines: null, analysis: null, done: null, evalScore: null });
+    Object.assign(view, { job: null, lines: null, analysis: null, done: null, evalScore: null, mate: null });
     clearArrows();
     clearMoves();
     renderEvalBar();
@@ -691,13 +742,18 @@
   function clearMoves() {
     els.moves.textContent = '';
     view.notice = null;
+    view.mate = null;
     els.notice.hidden = true;
+    els.sequence.hidden = true;
   }
 
   function renderMoves() {
     els.moves.textContent = '';
     els.notice.hidden = !view.notice;
+    els.notice.className = 'notice js-notice ' + view.noticeKind;
     if (view.notice) els.notice.textContent = view.notice();
+    els.sequence.hidden = !view.mate;
+    if (view.mate) els.sequence.textContent = t('sequence') + ' ' + view.mate.sequence;
     (view.lines || []).forEach((l, k) => {
       const li = document.createElement('li');
       li.style.setProperty('--c', palette[k]);
@@ -710,8 +766,12 @@
       const tier = CU.TIERS[l.tier];
       const tag = document.createElement('span');
       tag.className = 'tag';
-      tag.style.setProperty('--t', mark ? mark.color : tier.color);
-      tag.textContent = mark ? `${mark.symbol} ${t('mark_' + l.mark)}` : t('tier_' + tier.id);
+      const [color, label] = l.kind === 'mate' ? ['#be123c', t('mate_in', l.score.mate)]
+        : l.kind === 'attack' ? ['#c2410c', '⚔ ' + t('attack')]
+        : mark ? [mark.color, `${mark.symbol} ${t('mark_' + l.mark)}`]
+        : [tier.color, t('tier_' + tier.id)];
+      tag.style.setProperty('--t', color);
+      tag.textContent = label;
       tag.title = t('loss', (l.loss * 100).toFixed(1));
       mv.appendChild(tag);
       li.querySelector('.ev').textContent = l.eval;
@@ -787,9 +847,24 @@
     return el;
   }
 
-  function clearArrows() { svg.textContent = ''; svg.style.display = 'none'; }
+  function clearArrows() {
+    svg.textContent = '';
+    svg.style.display = 'none';
+    banner.hidden = true;
+  }
+
+  function renderBanner() {
+    const r = view.rect;
+    if (!view.mate || !r || panel.hidden) { banner.hidden = true; return; }
+    banner.textContent = t('mate_in', view.mate.mateIn);
+    const above = r.y - 44, below = r.y + r.h + 8;
+    const top = above >= 4 ? above : below + 36 <= innerHeight ? below : r.y + 8;
+    Object.assign(banner.style, { left: r.x + r.w / 2 + 'px', top: top + 'px' });
+    banner.hidden = false;
+  }
 
   function drawArrows() {
+    renderBanner();
     svg.textContent = '';
     const lines = view.lines;
     if (!settings.arrows || !lines || !lines.length || !view.rect || panel.hidden) { svg.style.display = 'none'; return; }
@@ -941,6 +1016,7 @@
     if (panel.hidden || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     const el = e.composedPath()[0];
     if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+    if (e.key === 'm' || e.key === 'M') { toggleMate(); return; }
     const n = '12345'.indexOf(e.key);
     if (n >= 0 && e.key.length === 1) setLevel(CU.LEVELS[n].id);
   };

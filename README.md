@@ -13,6 +13,7 @@ A browser extension for Brave, Chrome and Edge. It finds the chessboard on your 
 - **Suggestion levels:** Best, Excellent, Good, Average and Worst.
 - **Move marks like on chess.com:** `!!` Brilliant, `!` Great, `★` Best, drawn in the corner of the target square. When all three suggestions carry such a mark, a fourth dashed arrow shows the best unmarked move.
 - **Evaluation bar** next to the board.
+- **Mate mode** (`M`): shows a forced mate with the whole line to it, or moves that attack the king when there is no mate yet.
 - **Auto mode** follows the game: it knows whose turn it is, tracks castling rights and en passant, and waits while your opponent is thinking.
 - **Fix a misread square** by clicking it on the small board. The correction is learned, so the next scans get it right.
 - **Fast:** the first arrows appear about 0.1 s after the opponent's move and get refined as the engine searches deeper.
@@ -39,6 +40,7 @@ If you see “Manifest file is missing or unreadable”, you picked the wrong fo
 | `Alt+Shift+C` | show / hide the panel |
 | `Alt+Shift+S` | scan now |
 | `1`–`5` | switch the level (while the panel is open) |
+| `M` | mate mode on / off |
 
 Shortcuts can be changed at `brave://extensions/shortcuts`.
 
@@ -57,6 +59,14 @@ The engine evaluates the 12 best candidate moves. Each one is graded by how many
 Switching levels is instant, except for going to and from Worst. If a position has fewer than three moves at a level, the list is filled with better moves, never worse ones, and a note says so. Mistakes and blunders are only ever shown on the Worst level, so in a position with a single saving move every other level shows just that move.
 
 The `!!` and `!` marks are an approximation. chess.com does not publish its rules: here Brilliant means a piece sacrifice that is the best or nearly the best move, and Great means the only good move in the position.
+
+## Mate mode
+
+Turn it on with the **♚ Mate** switch or the `M` key; clicking a level turns it off again.
+
+- **Forced mate found:** a "Mate in N" label above the board, an arrow for your next move and the whole line in the panel (your move, the reply, your move… until mate). In Auto mode it follows the game and counts down.
+- **No forced mate yet:** up to three playable moves that put the most pressure on the enemy king (checks, taking away its squares, bringing pieces closer). Moves that lose material or the game are never shown.
+- **The opponent has a forced mate:** a warning and the best defence.
 
 ## Speed
 

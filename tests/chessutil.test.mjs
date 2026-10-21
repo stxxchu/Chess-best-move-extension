@@ -169,6 +169,44 @@ t('fourth arrow needs three marked picks and a playable alternative', () => {
   assert.equal(CU.withAlternative(picks, g).length, 3);
 });
 
+t('attack score prefers checks and squeezing the king', () => {
+  const b = B('4k3/8/8/8/8/8/8/R3K3');
+  const order = ['e1d2', 'a1a7', 'a1a8'].sort((x, y) => CU.attackScore(b, y) - CU.attackScore(b, x));
+  assert.deepEqual(order, ['a1a8', 'a1a7', 'e1d2']);
+});
+
+t('mate mode: forced mate first, shortest first', () => {
+  const b = B('6k1/5ppp/8/8/8/8/2Q2PPP/2R3K1');
+  const g = CU.grade(lines(['c2f5', { mate: 4 }], ['c2c8', { mate: 1 }], ['c2a2', { mate: 4 }], ['h2h3', 900]));
+  const res = CU.pickMateMode(g, b);
+  assert.equal(res.kind, 'mate');
+  assert.equal(res.mateIn, 1);
+  assert.deepEqual(res.picks.map(l => l.move), ['c2c8', 'c2f5', 'c2a2']);
+});
+
+t('mate mode: attacking moves when there is no mate, never losing ones', () => {
+  const b = B('4k3/8/8/8/8/8/8/R3K3');
+  const g = CU.grade(lines(['e1d2', 880], ['a1a7', 890], ['a1a8', 900], ['a1b1', 100]));
+  const res = CU.pickMateMode(g, b);
+  assert.equal(res.kind, 'attack');
+  assert.deepEqual(res.picks.map(l => l.move), ['a1a8', 'a1a7', 'e1d2']);
+});
+
+t('mate mode: defend when the opponent has a forced mate', () => {
+  const b = B('6k1/8/8/8/8/6q1/8/6K1');
+  const g = CU.grade(lines(['g1f1', { mate: -7 }], ['g1h1', { mate: -6 }]));
+  const res = CU.pickMateMode(g, b);
+  assert.equal(res.kind, 'defend');
+  assert.equal(res.mateIn, 7);
+  assert.equal(res.picks[0].move, 'g1f1');
+});
+
+t('line to mate is numbered and ends with #', () => {
+  const b = B('3r2k1/5ppp/8/8/8/8/4QPPP/4R1K1');
+  assert.equal(CU.formatSequence(b, ['e2e8', 'd8e8', 'e1e8'], 2), '1. ♕e2–e8+ ♜d8×e8 2. ♖e1×e8#');
+  assert.equal(CU.formatSequence(B('6k1/5ppp/8/8/8/8/5PPP/1R4K1'), ['b1b8'], 1), '1. ♖b1–b8#');
+});
+
 t('formatLine and formatScore', () => {
   assert.deepEqual(CU.formatLine(start, ['e2e4', 'e7e5', 'g1f3', 'b8c6']), ['e2–e4', 'e7–e5', '♘g1–f3', '♞b8–c6']);
   assert.equal(CU.formatScore({ cp: 35 }), '+0.35');

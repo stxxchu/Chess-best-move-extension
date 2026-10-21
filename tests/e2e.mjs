@@ -38,6 +38,9 @@ const readUi = p => p.evaluate(() => {
   return {
     status: root.querySelector('.js-status').textContent,
     notice: root.querySelector('.js-notice').hidden ? '' : root.querySelector('.js-notice').textContent,
+    sequence: root.querySelector('.js-sequence').hidden ? '' : root.querySelector('.js-sequence').textContent,
+    banner: root.querySelector('.mate-banner').hidden ? '' : root.querySelector('.mate-banner').textContent,
+    mateOn: root.querySelector('.js-mate').checked,
     moves: items.map(li => li.querySelector('.mv').firstChild.textContent + ' ' + li.querySelector('.ev').textContent),
     tags: items.map(li => li.querySelector('.tag').textContent),
     extra: items.map(li => li.classList.contains('extra')),
@@ -229,6 +232,37 @@ try {
   s = await waitFor(page, s => final(s) && /Worst/.test(s.status));
   check(s && s.tags[0] === 'Blunder' && !s.notice, 'the blunder shows up on the Worst level only');
   await clickLevel(page, 'good');
+
+  await page.keyboard.press('m');
+  await page.evaluate(() => window.cg.set({ fen: '3r2k1/5ppp/8/8/8/8/4QPPP/4R1K1', lastMove: undefined }));
+  s = await waitFor(page, s => final(s) && s.fen.startsWith('3r2k1/5ppp/8/8/8/8/4QPPP/4R1K1'));
+  console.log('   ', s && JSON.stringify({ moves: s.moves, tags: s.tags, banner: s.banner, sequence: s.sequence, status: s.status }));
+  check(s && s.mateOn && s.moves[0].startsWith('♕e2–e8+') && s.tags[0] === 'Mate in 2', 'mate mode (key M): the mating move comes first, tagged Mate in 2');
+  check(s && s.banner === 'Mate in 2' && s.sequence === 'Line to mate: 1. ♕e2–e8+ ♜d8×e8 2. ♖e1×e8#', 'banner over the board and the full line to mate in the panel');
+  check(s && s.arrows >= 1, 'arrow for the mating move');
+  check(s && s.moves[0] && /then: ♜d8×e8\s+♖e1×e8#/.test(await page.evaluate(() => document.querySelector('chess-hints-panel').shadowRoot.querySelector('.js-moves li .pv').textContent)), 'the continuation ends with #');
+  const bannerBox = await page.evaluate(() => { const b = document.querySelector('chess-hints-panel').shadowRoot.querySelector('.mate-banner').getBoundingClientRect(); return { bottom: b.bottom, top: b.top }; });
+  check(bannerBox.bottom <= 80, 'the banner sits above the board, not over the pieces: ' + JSON.stringify(bannerBox));
+  await page.screenshot({ path: path.join(shotDir, 'e2e_mate_mode.png') });
+
+  await page.evaluate(() => window.cg.move('e2', 'e8'));
+  s = await waitFor(page, s => /Waiting/.test(s.status) && s.fen.startsWith('3rQ1k1/'));
+  check(s && !s.banner, 'after my move it waits for the reply and hides the banner');
+  await page.evaluate(() => window.cg.move('d8', 'e8'));
+  s = await waitFor(page, s => final(s) && s.fen.startsWith('4r1k1/'));
+  check(s && s.moves[0].startsWith('♖e1×e8#') && s.banner === 'Mate in 1', 'Auto follows the line: now mate in 1');
+
+  await page.evaluate(() => window.cg.set({ fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', lastMove: undefined }));
+  s = await waitFor(page, s => final(s) && s.fen.startsWith('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w'));
+  check(s && /No forced mate/.test(s.notice) && s.tags.length >= 1 && s.tags.every(t => t === '⚔ Attack') && !s.banner, 'no mate: attacking moves with a note: ' + (s && s.moves.join(' | ')));
+
+  await page.evaluate(() => window.cg.set({ fen: '6k1/8/8/8/8/6q1/8/6K1', lastMove: undefined }));
+  s = await waitFor(page, s => final(s) && s.fen.startsWith('6k1/8/8/8/8/6q1/8/6K1'));
+  check(s && /forced mate in \d+/.test(s.notice) && !s.banner, 'opponent has a forced mate: warning and best defence: ' + (s && s.notice));
+
+  await clickLevel(page, 'good');
+  s = await readUi(page);
+  check(s && !s.mateOn && /Good/.test(s.status), 'clicking a level leaves mate mode');
 
   await page.goto('http://127.0.0.1:8766/board.html?lib=' + encodeURIComponent('cm+green+staunty') + '&size=600&fen=' +
     encodeURIComponent('r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4'), { waitUntil: 'networkidle0' });

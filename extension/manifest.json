@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Chess Hints – move suggestions from your screen",
   "short_name": "Chess Hints",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Finds the chessboard on your screen, reads the position and suggests moves at the level you pick, from the best to the worst. Stockfish runs locally.",
   "homepage_url": "https://github.com/stxxchu/Chess-best-move-extension",
   "minimum_chrome_version": "116",

@@ -1,6 +1,6 @@
 import * as V from './vision.js';
 
-const CONTENT_FILES = ['chessutil.js', 'text.js', 'content.js'];
+const CONTENT_FILES = ['chessutil.js', 'text.js', 'openings.js', 'content.js'];
 const templateCache = new Map();
 const lastSquares = new Map();
 const lastShots = new Map();

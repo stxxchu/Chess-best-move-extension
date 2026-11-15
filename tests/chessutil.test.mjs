@@ -207,6 +207,53 @@ t('line to mate is numbered and ends with #', () => {
   assert.equal(CU.formatSequence(B('6k1/5ppp/8/8/8/8/5PPP/1R4K1'), ['b1b8'], 1), '1. ♖b1–b8#');
 });
 
+t('legal move generation matches known perft counts', () => {
+  const perft = (fen, depth) => {
+    const [placement, side, castle, ep] = fen.split(' ');
+    const walk = (board, white, rights, epSq, d) => {
+      const moves = CU.legalMoves(board, white, rights, epSq);
+      if (d === 1) return moves.length;
+      let n = 0;
+      for (const m of moves) {
+        const next = CU.playMove({ board, white, castle: rights, ep: epSq }, m);
+        n += walk(next.board, next.white, next.castle, next.ep, d - 1);
+      }
+      return n;
+    };
+    return walk(CU.fromFen(placement), side === 'w', castle, ep, depth);
+  };
+  assert.equal(perft('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 3), 8902);
+  assert.equal(perft('r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -', 2), 2039);
+  assert.equal(perft('8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -', 3), 2812);
+  assert.equal(perft('r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -', 2), 264);
+});
+
+t('SAN: writing and reading moves', () => {
+  const s = CU.playSan(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Nf6', 'Ng5', 'd5', 'exd5', 'Nxd5', 'Nxf7']);
+  assert.equal(s.moves.at(-1), 'g5f7');
+  assert.equal(CU.toSan(CU.fromFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR'), true, 'KQkq', '-', 'h5f7'), 'Qxf7#');
+  assert.equal(CU.toSan(CU.fromFen('4k3/8/8/8/8/8/8/R3K2R'), true, 'KQ', '-', 'e1g1'), 'O-O');
+  assert.equal(CU.toSan(CU.fromFen('4k3/8/8/8/8/8/8/R5RK'), true, '-', '-', 'a1d1'), 'Rad1');
+  assert.equal(CU.toSan(CU.fromFen('4k3/1P6/8/8/8/8/8/4K3'), true, '-', '-', 'b7b8q'), 'b8=Q+');
+  assert.throws(() => CU.playSan(['e4', 'e5', 'Ke3']));
+  const mate = CU.playSan(['f3', 'e5', 'g4', 'Qh4#']);
+  assert.ok(mate.mate);
+});
+
+t('opening book: every line is legal and every mate is real', () => {
+  const OPENINGS = createRequire(import.meta.url)('../extension/openings.js');
+  assert.ok(OPENINGS.length >= 8);
+  for (const o of OPENINGS) {
+    assert.ok(['w', 'b'].includes(o.side) && o.name && o.about, o.id);
+    for (const line of o.lines) {
+      const sans = line.split(' ');
+      const res = CU.playSan(sans);
+      assert.equal(res.mate, sans.at(-1).endsWith('#'), `${o.name}: ${line}`);
+      if (res.mate) assert.equal(sans.length % 2 === 1, o.side === 'w', `${o.name}: the mate must be delivered by the opening's side`);
+    }
+  }
+});
+
 t('formatLine and formatScore', () => {
   assert.deepEqual(CU.formatLine(start, ['e2e4', 'e7e5', 'g1f3', 'b8c6']), ['e2–e4', 'e7–e5', '♘g1–f3', '♞b8–c6']);
   assert.equal(CU.formatScore({ cp: 35 }), '+0.35');

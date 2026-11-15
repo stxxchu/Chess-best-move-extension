@@ -26,7 +26,7 @@ try {
   await page.bringToFront();
   await sw.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'content.js'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'openings.js', 'content.js'] });
     await chrome.tabs.sendMessage(tab.id, { type: 'scan-now' });
   });
   const status = () => page.evaluate(() => document.querySelector('chess-hints-panel').shadowRoot.querySelector('.js-status').textContent);

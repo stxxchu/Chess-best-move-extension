@@ -15,6 +15,7 @@ Rozszerzenie do Brave, Chrome i Edge. Znajduje szachownicę na ekranie, rozpozna
 - **Poziomy podpowiedzi:** Best, Excellent, Good, Average i Worst.
 - **Oznaczenia ruchów jak na chess.com:** `!!` Brilliant, `!` Great, `★` Best, rysowane w rogu pola docelowego. Gdy wszystkie trzy podpowiedzi mają takie oznaczenie, czwarta przerywana strzałka pokazuje najlepszy ruch bez oznaczenia.
 - **Pasek oceny** obok planszy.
+- **Debiuty i pułapki:** wybierasz z listy gambit albo pułapkę z szybkim matem. Dopóki partia idzie tą linią, pierwsza podpowiedź to ruch z książki; gdy przeciwnik wpadnie w pułapkę, panel pokazuje mata; gdy wyjdzie z linii, prowadzi silnik.
 - **Tryb matu** (`M`): pokazuje forsownego mata z całą drogą do niego, a gdy mata jeszcze nie ma, ruchy atakujące króla.
 - **Tryb Auto** śledzi partię: wie, czyj jest ruch, pilnuje roszad i bicia w przelocie, czeka, gdy myśli przeciwnik.
 - **Poprawianie źle rozpoznanego pola** kliknięciem na małej planszy. Poprawka jest zapamiętywana, więc kolejne skany już się nie mylą.
@@ -61,6 +62,21 @@ Silnik ocenia 12 najlepszych kandydatów. Każdy ruch dostaje kategorię według
 Zmiana poziomu działa od razu, poza przejściem na „Worst” i z powrotem. Jeśli na danym poziomie nie ma trzech ruchów, lista jest uzupełniana lepszymi, nigdy gorszymi, i panel o tym informuje. Pomyłki i błędy pojawiają się wyłącznie na poziomie „Worst”, więc w pozycji z jednym ratującym ruchem pozostałe poziomy pokazują tylko ten ruch.
 
 Oznaczenia `!!` i `!` są przybliżeniem, bo chess.com nie publikuje swoich zasad. Tutaj „Brilliant” to poświęcenie figury, które jest najlepszym lub prawie najlepszym ruchem, a „Great” to jedyny dobry ruch w pozycji.
+
+## Debiuty
+
+Wybierasz je z listy **Opening** pod poziomami. Dopasowywana jest pozycja, a nie kolejność ruchów, więc przestawienia też działają. Przy ruchu z książki nadal widać ocenę silnika: część tych gambitów jest obiektywnie wątpliwa, są tu dla pułapek.
+
+| Debiut | Strona | Pomysł |
+|---|---|---|
+| Alien Gambit | białe | Caro-Kann: poświęcenie skoczka na f7 dla szybkiego ataku na króla. |
+| Fried Liver Attack | białe | Partia włoska: po 5...Nxd5 poświęcenie skoczka na f7 wyciąga króla. |
+| Scholar's Mate | białe | Hetman i goniec biją w f7. Mat w czterech ruchach, jeśli czarne nie uważają. |
+| Légal's Mate | białe | Białe oddają hetmana: po ...Bxd1, Bxf7+ i Nd5 to mat. |
+| Fool's Mate | czarne | Gdy białe osłabią króla ruchami f3 lub f4 i g4, Qh4 daje mata. |
+| Stafford Gambit | czarne | Obrona rosyjska z oddanym pionem za szybki rozwój i pułapki. |
+| Englund Gambit | czarne | Przeciw 1.d4: pion za wypad hetmana, który kończy się matem na ostatniej linii. |
+| Blackburne Shilling Gambit | czarne | Partia włoska: 3...Nd4 zaprasza Nxe5, potem hetman i skoczek dają mata. |
 
 ## Tryb matu
 

@@ -5,6 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from './server.mjs';
 import { BRAVE } from './fixtures.mjs';
+import { createRequire } from 'node:module';
+
+const CU = createRequire(import.meta.url)('../extension/chessutil.js');
+const fenAfter = line => CU.placementFen(CU.playSan(line.split(' ')).states.at(-1).board);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const extPath = path.resolve(here, '../extension');
@@ -87,7 +91,7 @@ try {
   const trigger = type => sw.evaluate(async type => {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     try { await chrome.tabs.sendMessage(tab.id, { type: 'ping' }); }
-    catch { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'content.js'] }); }
+    catch { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'openings.js', 'content.js'] }); }
     await chrome.tabs.sendMessage(tab.id, { type });
   }, type);
 
@@ -285,6 +289,27 @@ try {
   s = await readUi(page);
   check(s && !s.mateOn && /Good/.test(s.status), 'clicking a level leaves mate mode');
 
+  await panelDo(page, 'select', { sel: '.js-opening', value: 'scholar' });
+  await page.evaluate(() => window.cg.set({ fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', lastMove: undefined }));
+  s = await waitFor(page, s => final(s) && s.fen.startsWith('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w'));
+  check(s && s.moves[0].startsWith('e2–e4') && s.tags[0] === '📖 Book' && /Scholar's Mate: book move/.test(s.notice), "opening Scholar's Mate: the book move comes first: " + (s && s.moves[0]));
+  const scholar = fenAfter('e4 e5 Bc4 Nc6 Qh5 Nf6');
+  await page.evaluate(fen => window.cg.set({ fen, lastMove: undefined }), scholar);
+  s = await waitFor(page, s => final(s) && s.fen.startsWith(scholar));
+  check(s && s.moves[0].startsWith('♕h5×f7#') && s.tags[0] === '📖 Mate', 'the trap is sprung: the book shows the mate: ' + (s && s.moves[0] + ' ' + s.tags[0]));
+
+  await panelDo(page, 'select', { sel: '.js-opening', value: 'alien' });
+  const alien = fenAfter('e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nf6 Ng5 h6');
+  await page.evaluate(fen => window.cg.set({ fen, lastMove: undefined }), alien);
+  s = await waitFor(page, s => final(s) && s.fen.startsWith(alien));
+  check(s && s.moves[0].startsWith('♘g5×f7') && s.tags[0] === '📖 Book' && /Alien Gambit: book move/.test(s.notice), 'Alien Gambit: the knight sacrifice on f7 is suggested: ' + (s && s.moves.join(' | ')));
+  await page.screenshot({ path: path.join(shotDir, 'e2e_alien.png') });
+
+  await page.evaluate(() => window.cg.set({ fen: 'r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R', lastMove: undefined }));
+  s = await waitFor(page, s => final(s) && s.fen.startsWith('r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R'));
+  check(s && /Not in the Alien Gambit line/.test(s.notice) && !s.tags.includes('📖 Book'), 'out of the book line: engine moves with a note');
+  await panelDo(page, 'select', { sel: '.js-opening', value: '' });
+
   await page.goto('http://127.0.0.1:8766/board.html?lib=' + encodeURIComponent('cm+green+staunty') + '&size=600&fen=' +
     encodeURIComponent('r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4'), { waitUntil: 'networkidle0' });
   await trigger('scan-now');
@@ -310,6 +335,18 @@ try {
   await trigger('scan-now');
   s = await waitFor(page2, s => s.moves.length >= 3 && final(s));
   check(s && s.fen.startsWith('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3'), 'black to move, suggestions shown: ' + (s && s.moves.join(' | ')));
+
+  await panelDo(page2, 'select', { sel: '.js-opening', value: 'stafford' });
+  await page2.evaluate(() => window.cb.setPosition('rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R', false));
+  await sleep(300);
+  await trigger('scan-now');
+  s = await waitFor(page2, s => final(s) && s.fen.startsWith('rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b'));
+  check(s && s.moves[0].startsWith('♞g8–f6') && s.tags[0] === '📖 Book', 'Stafford Gambit as Black: 2...Nf6 from the book: ' + (s && s.moves.join(' | ')));
+  await panelDo(page2, 'select', { sel: '.js-opening', value: '' });
+  await page2.evaluate(() => window.cb.setPosition('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', false));
+  await sleep(300);
+  await trigger('scan-now');
+  s = await waitFor(page2, s => final(s) && s.fen.startsWith('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b'));
 
   await panelDo(page2, 'clickAll', { sel: '.js-mini div', index: 57 });
   await panelDo(page2, 'click', '.js-picker [data-piece="."]');

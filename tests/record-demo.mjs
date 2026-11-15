@@ -56,7 +56,7 @@ try {
   await sleep(800);
   await sw.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'content.js'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'openings.js', 'content.js'] });
     await chrome.tabs.sendMessage(tab.id, { type: 'scan-now' });
   });
   await waitStatus(/scan \d+ ms/);

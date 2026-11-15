@@ -15,6 +15,7 @@ A browser extension for Brave, Chrome and Edge. It finds the chessboard on your 
 - **Suggestion levels:** Best, Excellent, Good, Average and Worst.
 - **Move marks like on chess.com:** `!!` Brilliant, `!` Great, `★` Best, drawn in the corner of the target square. When all three suggestions carry such a mark, a fourth dashed arrow shows the best unmarked move.
 - **Evaluation bar** next to the board.
+- **Openings and traps:** pick a gambit or a quick-mate trap from the list. While the game follows the line, the book move comes first; when the opponent falls for the trap it shows the mate; when they leave the line the engine takes over.
 - **Mate mode** (`M`): shows a forced mate with the whole line to it, or moves that attack the king when there is no mate yet.
 - **Auto mode** follows the game: it knows whose turn it is, tracks castling rights and en passant, and waits while your opponent is thinking.
 - **Fix a misread square** by clicking it on the small board. The correction is learned, so the next scans get it right.
@@ -61,6 +62,21 @@ The engine evaluates the 12 best candidate moves. Each one is graded by how many
 Switching levels is instant, except for going to and from Worst. If a position has fewer than three moves at a level, the list is filled with better moves, never worse ones, and a note says so. Mistakes and blunders are only ever shown on the Worst level, so in a position with a single saving move every other level shows just that move.
 
 The `!!` and `!` marks are an approximation. chess.com does not publish its rules: here Brilliant means a piece sacrifice that is the best or nearly the best move, and Great means the only good move in the position.
+
+## Openings
+
+Choose one in the **Opening** list under the levels. Positions are matched, not move orders, so transpositions work too. The engine's evaluation is still shown next to a book move: some of these gambits are objectively dubious, they are here because they set traps.
+
+| Opening | Side | Idea |
+|---|---|---|
+| Alien Gambit | White | Caro-Kann: a knight sacrifice on f7 for a fast attack on the king. |
+| Fried Liver Attack | White | Italian Game: after 5...Nxd5, the knight sacrifice on f7 drags the king out. |
+| Scholar's Mate | White | Queen and bishop hit f7. Mates in four moves if Black is careless. |
+| Légal's Mate | White | White gives up the queen: after ...Bxd1, Bxf7+ and Nd5 is mate. |
+| Fool's Mate | Black | If White weakens the king with f3 or f4 and g4, Qh4 is mate. |
+| Stafford Gambit | Black | Petrov with a pawn given up for fast development and traps. |
+| Englund Gambit | Black | Against 1.d4: a pawn for a queen raid that ends in a back-rank mate. |
+| Blackburne Shilling Gambit | Black | Italian Game: 3...Nd4 invites Nxe5, then the queen and knight mate. |
 
 ## Mate mode
 

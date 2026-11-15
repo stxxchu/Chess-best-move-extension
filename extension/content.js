@@ -3,13 +3,14 @@
   window.__chessHints = true;
   const CU = globalThis.ChessUtil;
   const { t } = globalThis.ChessHintsText;
+  const OPENINGS = globalThis.ChessHintsOpenings || [];
 
   const CANDIDATES = 12;
   const ALL_MOVES = 256;
   const SCAN_ERRORS = ['no-board', 'partial', 'needs-calibration', 'not-start', 'mismatch'];
   const settings = {
     side: 'bottom', orient: 'auto', movetime: 2000, arrows: true, evalBar: true, auto: false, pos: null,
-    min: false, compact: false, level: 'good', mate: false, theme: 'dark', onboarded: false,
+    min: false, compact: false, level: 'good', mate: false, opening: '', theme: 'dark', onboarded: false,
   };
   const game = { prev: null, lost: {}, stm: null, stmKnown: false, ep: '-', whiteBottom: true, fen: null, lastTo: -1, oneOff: 0 };
   const view = {
@@ -67,6 +68,8 @@
   .levels button.on { background: var(--accent); color: var(--accent-ink); font-weight: 650; }
   .levels button[data-level="worst"].on { background: #b91c1c; color: #fff; }
   .lvl-hint { font-size: 11px; color: var(--faint); margin-top: -4px; }
+  .opening { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--soft); }
+  .opening select { flex: 1; width: auto; }
   .tag { font: 600 10px system-ui, sans-serif; padding: 2px 6px; border-radius: 10px; color: #fff; background: var(--t); margin-left: 6px; vertical-align: 3px; letter-spacing: .2px; white-space: nowrap; }
   .status { font-size: 12px; color: var(--soft); min-height: 17px; }
   .status.warn { color: var(--warn); } .status.err { color: var(--err); } .status.ok { color: var(--ok); }
@@ -169,6 +172,8 @@
       <div class="lvl-title" data-i18n="level_title"></div>
       <div class="levels js-levels"></div>
       <div class="lvl-hint js-lvl-hint"></div>
+      <label class="opening"><span data-i18n="opening"></span><select class="js-opening"></select></label>
+      <div class="lvl-hint js-opening-hint" hidden></div>
       <div class="status js-status"></div>
       <div class="notice js-notice" hidden></div>
       <div class="sequence js-sequence" hidden></div>
@@ -228,7 +233,7 @@
     status: $('.js-status'), notice: $('.js-notice'), sequence: $('.js-sequence'), mate: $('.js-mate'), moves: $('.js-moves'), miniWrap: $('.js-mini-wrap'), mini: $('.js-mini'), picker: $('.js-picker'),
     fen: $('.js-fen'), auto: $('.js-auto'), side: $('.js-side'), orient: $('.js-orient'), movetime: $('.js-movetime'),
     mt: $('.js-mt'), arrows: $('.js-arrows'), evalBar: $('.js-evalbar'), theme: $('.js-theme'),
-    colors: $('.js-colors'), select: $('.js-select'), levels: $('.js-levels'), lvlHint: $('.js-lvl-hint'), onboard: $('.js-onboard'),
+    colors: $('.js-colors'), select: $('.js-select'), levels: $('.js-levels'), lvlHint: $('.js-lvl-hint'), opening: $('.js-opening'), openingHint: $('.js-opening-hint'), onboard: $('.js-onboard'),
   };
 
   for (const lv of CU.LEVELS) {
@@ -236,6 +241,24 @@
     b.dataset.level = lv.id;
     b.onclick = () => setLevel(lv.id);
     els.levels.appendChild(b);
+  }
+
+  {
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = t('opening_off');
+    els.opening.appendChild(off);
+    for (const side of ['w', 'b']) {
+      const group = document.createElement('optgroup');
+      group.label = t(side === 'w' ? 'as_white' : 'as_black');
+      for (const o of OPENINGS.filter(x => x.side === side)) {
+        const opt = document.createElement('option');
+        opt.value = o.id;
+        opt.textContent = o.name;
+        group.appendChild(opt);
+      }
+      els.opening.appendChild(group);
+    }
   }
 
   const send = msg => chrome.runtime.sendMessage({ target: 'bg', ...msg });
@@ -269,6 +292,11 @@
     els.evalBar.checked = settings.evalBar;
     els.auto.checked = settings.auto;
     els.mate.checked = settings.mate;
+    if (!OPENINGS.some(o => o.id === settings.opening)) settings.opening = '';
+    els.opening.value = settings.opening;
+    const chosen = OPENINGS.find(o => o.id === settings.opening);
+    els.openingHint.hidden = !chosen;
+    els.openingHint.textContent = chosen ? chosen.about : '';
     els.levels.classList.toggle('dimmed', settings.mate);
     els.theme.value = settings.theme;
     els.onboard.hidden = settings.onboarded;
@@ -329,6 +357,12 @@
   els.evalBar.onchange = () => { settings.evalBar = els.evalBar.checked; saveSettings(); renderEvalBar(); };
   els.auto.onchange = () => { settings.auto = els.auto.checked; if (settings.auto) scan(); };
   els.mate.onchange = () => { if (els.mate.checked !== settings.mate) toggleMate(); };
+  els.opening.onchange = () => {
+    settings.opening = els.opening.value;
+    saveSettings();
+    syncControls();
+    if (view.analysis) showLevel();
+  };
   els.theme.onchange = () => { settings.theme = els.theme.value; saveSettings(); applyTheme(); };
 
   $('.js-scan').onclick = () => scan();
@@ -688,17 +722,21 @@
     view.noticeKind = 'warn';
     let picks = CU.pickForLevel(a.all, level.id, 3);
     if (!level.all) picks = CU.withAlternative(picks, a.all);
-    view.lines = picks;
-    const name = () => t('level_' + level.id);
+    const ob = level.all ? { picks } : withBook(a, picks);
+    view.lines = ob.picks;
+    const name = () => (ob.inBook ? '📖 ' + ob.book.name : t('level_' + level.id));
     const own = picks.some(l => !l.extra && CU.inLevel(l, level.id));
-    view.notice = level.all ? null : picks.length === 1 ? () => t('only_move') : !own ? () => t('level_none', name()) : null;
+    view.notice = ob.inBook ? () => t('in_book', ob.book.name)
+      : level.all ? null : picks.length === 1 ? () => t('only_move') : !own ? () => t('level_none', t('level_' + level.id))
+      : ob.book ? () => t('out_of_book', ob.book.name) : null;
+    view.noticeKind = ob.inBook || (ob.book && !(level.all || picks.length === 1 || !own)) ? 'info' : 'warn';
     renderMoves();
     drawArrows();
     renderMini();
     renderEvalBar();
     if (!a.job.final) { say('', () => t('thinking_more', name(), a.depth)); return; }
     const assumed = !game.stmKnown;
-    const filled = !view.notice && level.lo !== undefined && picks.some(l => !l.extra && l.loss <= level.lo);
+    const filled = !view.notice && !ob.inBook && level.lo !== undefined && picks.some(l => !l.extra && l.loss <= level.lo);
     const scanMs = view.scanMs;
     finish('ok', () => [
       name(), t('depth', a.depth), t('to_move', sideName(a.job.stm)) + (assumed ? t('assumed') : ''), t('scan_ms', scanMs),
@@ -708,10 +746,11 @@
 
   function showMate(a) {
     const res = CU.pickMateMode(a.all, a.job.board);
-    view.lines = res.picks.map(l => ({ ...l, kind: res.kind }));
+    const ob = res.kind === 'mate' ? { picks: res.picks } : withBook(a, res.picks.map(l => ({ ...l, kind: res.kind })));
+    view.lines = res.kind === 'mate' ? res.picks.map(l => ({ ...l, kind: 'mate' })) : ob.picks;
     view.mate = res.kind === 'mate' ? { mateIn: res.mateIn, sequence: CU.formatSequence(a.job.board, res.picks[0].pv, res.mateIn) } : null;
-    view.notice = res.kind === 'attack' ? () => t('no_mate') : res.kind === 'defend' ? () => t('mate_threat', res.mateIn) : null;
-    view.noticeKind = res.kind === 'attack' ? 'info' : 'warn';
+    view.notice = ob.inBook ? () => t('in_book', ob.book.name) : res.kind === 'attack' ? () => t('no_mate') : res.kind === 'defend' ? () => t('mate_threat', res.mateIn) : null;
+    view.noticeKind = ob.inBook || res.kind === 'attack' ? 'info' : 'warn';
     renderMoves();
     drawArrows();
     renderMini();
@@ -723,6 +762,50 @@
       res.kind === 'mate' ? t('mate_in', res.mateIn) : t('mate'), t('depth', a.depth),
       t('to_move', sideName(a.job.stm)) + (assumed ? t('assumed') : ''), t('scan_ms', scanMs),
     ].join(' · '));
+  }
+
+  let book = null;
+
+  function currentBook() {
+    const o = OPENINGS.find(x => x.id === settings.opening);
+    if (!o) return null;
+    if (book && book.id === o.id) return book;
+    const map = new Map();
+    for (const line of o.lines) {
+      const sans = line.split(' ');
+      const { moves, states } = CU.playSan(sans);
+      const mates = sans[sans.length - 1].endsWith('#');
+      moves.forEach((move, i) => {
+        const st = states[i];
+        if (st.white !== (o.side === 'w')) return;
+        const key = CU.placementFen(st.board) + ' ' + (st.white ? 'w' : 'b');
+        const list = map.get(key) || [];
+        if (!list.some(e => e.move === move)) list.push({ move, rest: moves.slice(i + 1), mate: mates && i === moves.length - 1 });
+        map.set(key, list);
+      });
+    }
+    book = { id: o.id, name: o.name, map };
+    return book;
+  }
+
+  function withBook(a, picks) {
+    const b = currentBook();
+    if (!b) return { picks };
+    const entries = b.map.get(CU.placementFen(a.job.board) + ' ' + a.job.stm);
+    if (!entries) return { picks, book: b };
+    const board = a.job.board;
+    const bookLines = entries.slice(0, 2).map(e => {
+      const known = a.all.find(l => l.move === e.move);
+      const base = known || { move: e.move, score: { cp: 0 }, eval: '', loss: 0, tier: 0, mark: null, pv: [e.move] };
+      const text = CU.formatMove(board, e.move);
+      return {
+        ...base, kind: 'book', bookMate: e.mate,
+        text: e.mate ? text.replace(/\+$/, '') + '#' : text,
+        cont: CU.formatLine(CU.applyMove(board, e.move), e.rest, 5).join('  '),
+      };
+    });
+    const rest = picks.filter(l => !entries.some(e => e.move === l.move));
+    return { picks: [...bookLines, ...rest].slice(0, 3), inBook: true, book: b };
   }
 
   function rerun() {
@@ -802,7 +885,8 @@
       const tier = CU.TIERS[l.tier];
       const tag = document.createElement('span');
       tag.className = 'tag';
-      const [color, label] = l.kind === 'mate' ? ['#be123c', t('mate_in', l.score.mate)]
+      const [color, label] = l.kind === 'book' ? ['#7c3aed', '📖 ' + t(l.bookMate ? 'book_mate' : 'book')]
+        : l.kind === 'mate' ? ['#be123c', t('mate_in', l.score.mate)]
         : l.kind === 'attack' ? ['#c2410c', '⚔ ' + t('attack')]
         : mark ? [mark.color, `${mark.symbol} ${t('mark_' + l.mark)}`]
         : [tier.color, t('tier_' + tier.id)];
@@ -811,6 +895,7 @@
       tag.title = t('loss', (l.loss * 100).toFixed(1));
       mv.appendChild(tag);
       li.querySelector('.ev').textContent = l.eval;
+      li.querySelector('.ev').hidden = !l.eval;
       li.querySelector('.ev').title = t('eval_title');
       const cont = l.cont ? t('then') + l.cont : '';
       li.querySelector('.pv').textContent = l.extra ? t('extra') + (cont ? ' · ' + cont : '') : cont;

@@ -155,6 +155,122 @@
     return b;
   }
 
+  function legalMoves(board, white, castle = '-', ep = '-') {
+    const out = [];
+    const own = p => p !== '.' && isWhite(p) === white;
+    const at = (r, c) => (r >= 0 && r < 8 && c >= 0 && c < 8 ? r * 8 + c : -1);
+    const push = (from, to) => {
+      if (board[from].toUpperCase() === 'P' && (to >> 3 === 0 || to >> 3 === 7)) for (const q of 'qrbn') out.push(sqName(from) + sqName(to) + q);
+      else out.push(sqName(from) + sqName(to));
+    };
+    const epIndex = ep === '-' ? -1 : sqIndex(ep);
+    for (let sq = 0; sq < 64; sq++) {
+      const p = board[sq];
+      if (!own(p)) continue;
+      const r = sq >> 3, c = sq & 7, t = p.toUpperCase();
+      if (t === 'P') {
+        const dir = white ? -1 : 1;
+        const one = at(r + dir, c);
+        if (one >= 0 && board[one] === '.') {
+          push(sq, one);
+          const two = at(r + 2 * dir, c);
+          if (r === (white ? 6 : 1) && board[two] === '.') push(sq, two);
+        }
+        for (const dc of [-1, 1]) {
+          const x = at(r + dir, c + dc);
+          if (x >= 0 && ((board[x] !== '.' && !own(board[x])) || x === epIndex)) push(sq, x);
+        }
+      } else if (t === 'N' || t === 'K') {
+        for (const [dr, dc] of t === 'N' ? KNIGHT : KING) {
+          const x = at(r + dr, c + dc);
+          if (x >= 0 && !own(board[x])) push(sq, x);
+        }
+      } else {
+        const dirs = t === 'R' ? LINES[0] : t === 'B' ? LINES[1] : [...LINES[0], ...LINES[1]];
+        for (const [dr, dc] of dirs) {
+          for (let rr = r + dr, cc = c + dc; ; rr += dr, cc += dc) {
+            const x = at(rr, cc);
+            if (x < 0 || own(board[x])) break;
+            push(sq, x);
+            if (board[x] !== '.') break;
+          }
+        }
+      }
+    }
+    const ks = white ? 60 : 4, rook = white ? 'R' : 'r';
+    if (board[ks] === (white ? 'K' : 'k') && !attacked(board, ks, !white)) {
+      const free = sqs => sqs.every(s => board[s] === '.');
+      const safe = sqs => sqs.every(s => !attacked(board, s, !white));
+      if (castle.includes(white ? 'K' : 'k') && board[ks + 3] === rook && free([ks + 1, ks + 2]) && safe([ks + 1, ks + 2])) out.push(sqName(ks) + sqName(ks + 2));
+      if (castle.includes(white ? 'Q' : 'q') && board[ks - 4] === rook && free([ks - 1, ks - 2, ks - 3]) && safe([ks - 1, ks - 2])) out.push(sqName(ks) + sqName(ks - 2));
+    }
+    return out.filter(m => !inCheck(applyMove(board, m), white));
+  }
+
+  function playMove(state, uci) {
+    const from = sqIndex(uci.slice(0, 2)), to = sqIndex(uci.slice(2, 4));
+    const p = state.board[from];
+    let castle = state.castle === '-' ? '' : state.castle;
+    const drop = (...rights) => { castle = [...castle].filter(x => !rights.includes(x)).join(''); };
+    if (p === 'K') drop('K', 'Q');
+    if (p === 'k') drop('k', 'q');
+    for (const sq of [from, to]) {
+      if (sq === 63) drop('K');
+      if (sq === 56) drop('Q');
+      if (sq === 7) drop('k');
+      if (sq === 0) drop('q');
+    }
+    const double = p.toUpperCase() === 'P' && Math.abs(from - to) === 16;
+    return { board: applyMove(state.board, uci), white: !state.white, castle: castle || '-', ep: double ? sqName((from + to) / 2) : '-' };
+  }
+
+  function toSan(board, white, castle, ep, uci) {
+    const from = sqIndex(uci.slice(0, 2)), to = sqIndex(uci.slice(2, 4));
+    const p = board[from], t = p.toUpperCase();
+    let s;
+    if (t === 'K' && Math.abs((from & 7) - (to & 7)) === 2) {
+      s = (to & 7) === 6 ? 'O-O' : 'O-O-O';
+    } else {
+      const capture = board[to] !== '.' || (t === 'P' && (from & 7) !== (to & 7));
+      if (t === 'P') {
+        s = (capture ? FILES[from & 7] + 'x' : '') + uci.slice(2, 4) + (uci[4] ? '=' + uci[4].toUpperCase() : '');
+      } else {
+        const rivals = legalMoves(board, white, castle, ep)
+          .filter(m => m !== uci && m.slice(2, 4) === uci.slice(2, 4) && board[sqIndex(m.slice(0, 2))] === p)
+          .map(m => sqIndex(m.slice(0, 2)));
+        let dis = '';
+        if (rivals.length) {
+          if (!rivals.some(r => (r & 7) === (from & 7))) dis = uci[0];
+          else if (!rivals.some(r => r >> 3 === from >> 3)) dis = uci[1];
+          else dis = uci.slice(0, 2);
+        }
+        s = t + dis + (capture ? 'x' : '') + uci.slice(2, 4);
+      }
+    }
+    const next = playMove({ board, white, castle, ep }, uci);
+    if (inCheck(next.board, next.white)) s += legalMoves(next.board, next.white, next.castle, next.ep).length ? '+' : '#';
+    return s;
+  }
+
+  function fromSan(board, white, castle, ep, san) {
+    const want = san.replace(/[+#!?]/g, '').replace(/0/g, 'O');
+    return legalMoves(board, white, castle, ep).find(m => toSan(board, white, castle, ep, m).replace(/[+#]/g, '') === want) || null;
+  }
+
+  function playSan(sans) {
+    let state = { board: [...START], white: true, castle: 'KQkq', ep: '-' };
+    const moves = [], states = [state];
+    for (const san of sans) {
+      const uci = fromSan(state.board, state.white, state.castle, state.ep, san);
+      if (!uci) throw new Error(`illegal move ${san} after ${moves.length} plies`);
+      moves.push(uci);
+      state = playMove(state, uci);
+      states.push(state);
+    }
+    const mate = inCheck(state.board, state.white) && !legalMoves(state.board, state.white, state.castle, state.ep).length;
+    return { moves, states, mate };
+  }
+
   function formatMove(board, uci) {
     const from = sqIndex(uci.slice(0, 2)), to = sqIndex(uci.slice(2, 4));
     const p = board[from];
@@ -351,7 +467,7 @@
   const api = {
     START, GLYPH, TIERS, MARKS, LEVELS, isWhite, sqName, sqIndex, fromFen, placementFen, screenToBoard, boardToScreen,
     attackers, attacked, inCheck, validate, isStart, inferMover, inferEnPassant, castling, guessWhiteBottom,
-    applyMove, formatMove, formatLine, formatScore, expectedScore, negate, grade, hanging, isSacrifice, annotate,
+    applyMove, legalMoves, playMove, toSan, fromSan, playSan, formatMove, formatLine, formatScore, expectedScore, negate, grade, hanging, isSacrifice, annotate,
     pickForLevel, inLevel, withAlternative, attackScore, pickMateMode, formatSequence,
   };
   root.ChessUtil = api;

@@ -1,6 +1,6 @@
 import * as V from './vision.js';
 
-const CONTENT_FILES = ['chessutil.js', 'i18n.js', 'content.js'];
+const CONTENT_FILES = ['chessutil.js', 'text.js', 'content.js'];
 const templateCache = new Map();
 const lastSquares = new Map();
 const lastShots = new Map();
@@ -27,7 +27,7 @@ async function openPanel(tab, type) {
     await chrome.tabs.sendMessage(tab.id, { type });
   } catch {
     chrome.action.setBadgeText({ tabId: tab.id, text: '✕' });
-    chrome.action.setTitle({ tabId: tab.id, title: chrome.i18n.getMessage('unsupportedPage') });
+    chrome.action.setTitle({ tabId: tab.id, title: 'Chess Hints does not work on this page' });
   }
 }
 

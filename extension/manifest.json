@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "__MSG_extName__",
-  "short_name": "__MSG_extShortName__",
-  "version": "1.5.0",
-  "description": "__MSG_extDescription__",
+  "name": "Chess Hints – move suggestions from your screen",
+  "short_name": "Chess Hints",
+  "version": "2.0.0",
+  "description": "Finds the chessboard on your screen, reads the position and suggests moves at the level you pick, from the best to the worst. Stockfish runs locally.",
   "homepage_url": "https://github.com/stxxchu/Chess-best-move-extension",
-  "default_locale": "en",
   "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
@@ -21,7 +20,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "__MSG_actionTitle__",
+    "default_title": "Chess Hints (Alt+Shift+C)",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -40,13 +39,13 @@
       "suggested_key": {
         "default": "Alt+Shift+C"
       },
-      "description": "__MSG_cmdToggle__"
+      "description": "Show / hide the panel"
     },
     "scan-now": {
       "suggested_key": {
         "default": "Alt+Shift+S"
       },
-      "description": "__MSG_cmdScan__"
+      "description": "Scan the board now"
     }
   },
   "content_security_policy": {

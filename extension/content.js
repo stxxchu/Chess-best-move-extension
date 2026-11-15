@@ -2,14 +2,14 @@
   if (window.__chessHints) return;
   window.__chessHints = true;
   const CU = globalThis.ChessUtil;
-  const I18N = globalThis.ChessHintsI18n;
+  const { t } = globalThis.ChessHintsText;
 
   const CANDIDATES = 12;
   const ALL_MOVES = 256;
   const SCAN_ERRORS = ['no-board', 'partial', 'needs-calibration', 'not-start', 'mismatch'];
   const settings = {
     side: 'bottom', orient: 'auto', movetime: 2000, arrows: true, evalBar: true, auto: false, pos: null,
-    min: false, compact: false, level: 'good', mate: false, lang: 'auto', theme: 'dark', onboarded: false,
+    min: false, compact: false, level: 'good', mate: false, theme: 'dark', onboarded: false,
   };
   const game = { prev: null, lost: {}, stm: null, stmKnown: false, ep: '-', whiteBottom: true, fen: null, lastTo: -1, oneOff: 0 };
   const view = {
@@ -19,7 +19,6 @@
   let palette = ['#16a34a', '#2563eb', '#f97316', '#7c3aed'];
   let seq = 0;
   let alive = true;
-  let t = I18N.translator(I18N.pick(settings.lang, chrome.i18n.getUILanguage()));
 
   const CSS = `
   :host { all: initial; }
@@ -108,7 +107,6 @@
   .settings { display: grid; gap: 8px; margin-top: 8px; }
   .settings label { display: grid; gap: 3px; font-size: 12px; color: var(--soft); }
   .settings label.switch { display: flex; }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   select, input[type=range] { width: 100%; accent-color: var(--accent); }
   select { background: var(--btn); color: var(--fg); border: 1px solid var(--line-strong); border-radius: 6px; padding: 4px; font-size: 12px; }
   .colors { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); }
@@ -200,12 +198,8 @@
             <input type="range" class="js-movetime" min="100" max="5000" step="100"></label>
           <label class="switch"><input type="checkbox" class="js-arrows"> <span data-i18n="arrows"></span></label>
           <label class="switch"><input type="checkbox" class="js-evalbar"> <span data-i18n="eval_bar"></span></label>
-          <div class="pair">
-            <label><span data-i18n="language"></span>
-              <select class="js-lang"><option value="auto" data-i18n="lang_auto"></option><option value="en">English</option><option value="pl">Polski</option></select></label>
-            <label><span data-i18n="theme"></span>
-              <select class="js-theme"><option value="dark" data-i18n="theme_dark"></option><option value="light" data-i18n="theme_light"></option><option value="auto" data-i18n="theme_auto"></option></select></label>
-          </div>
+          <label><span data-i18n="theme"></span>
+            <select class="js-theme"><option value="dark" data-i18n="theme_dark"></option><option value="light" data-i18n="theme_light"></option><option value="auto" data-i18n="theme_auto"></option></select></label>
           <div class="row">
             <button class="btn js-select"></button>
             <button class="btn js-calibrate" data-i18n="calibrate"></button>
@@ -233,7 +227,7 @@
   const els = {
     status: $('.js-status'), notice: $('.js-notice'), sequence: $('.js-sequence'), mate: $('.js-mate'), moves: $('.js-moves'), miniWrap: $('.js-mini-wrap'), mini: $('.js-mini'), picker: $('.js-picker'),
     fen: $('.js-fen'), auto: $('.js-auto'), side: $('.js-side'), orient: $('.js-orient'), movetime: $('.js-movetime'),
-    mt: $('.js-mt'), arrows: $('.js-arrows'), evalBar: $('.js-evalbar'), lang: $('.js-lang'), theme: $('.js-theme'),
+    mt: $('.js-mt'), arrows: $('.js-arrows'), evalBar: $('.js-evalbar'), theme: $('.js-theme'),
     colors: $('.js-colors'), select: $('.js-select'), levels: $('.js-levels'), lvlHint: $('.js-lvl-hint'), onboard: $('.js-onboard'),
   };
 
@@ -255,6 +249,7 @@
 
   chrome.storage.local.get('settings').then(({ settings: s }) => {
     Object.assign(settings, s || {}, { auto: false });
+    delete settings.lang;
     if (!CU.LEVELS.some(l => l.id === settings.level)) settings.level = 'good';
     syncControls();
     if (settings.pos) placePanel(settings.pos.x, settings.pos.y);
@@ -275,18 +270,16 @@
     els.auto.checked = settings.auto;
     els.mate.checked = settings.mate;
     els.levels.classList.toggle('dimmed', settings.mate);
-    els.lang.value = settings.lang;
     els.theme.value = settings.theme;
     els.onboard.hidden = settings.onboarded;
     panel.classList.toggle('min', settings.min);
     panel.classList.toggle('compact', settings.compact);
     for (const b of els.levels.children) b.classList.toggle('on', b.dataset.level === settings.level);
     applyTheme();
-    translate();
+    renderTexts();
   }
 
-  function translate() {
-    t = I18N.translator(I18N.pick(settings.lang, chrome.i18n.getUILanguage()));
+  function renderTexts() {
     for (const el of shadow.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
     for (const el of shadow.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
     for (const b of els.levels.children) {
@@ -336,7 +329,6 @@
   els.evalBar.onchange = () => { settings.evalBar = els.evalBar.checked; saveSettings(); renderEvalBar(); };
   els.auto.onchange = () => { settings.auto = els.auto.checked; if (settings.auto) scan(); };
   els.mate.onchange = () => { if (els.mate.checked !== settings.mate) toggleMate(); };
-  els.lang.onchange = () => { settings.lang = els.lang.value; saveSettings(); translate(); };
   els.theme.onchange = () => { settings.theme = els.theme.value; saveSettings(); applyTheme(); };
 
   $('.js-scan').onclick = () => scan();
@@ -355,7 +347,7 @@
     if (!view.manualRect) { startSelect(); return; }
     view.manualRect = null;
     view.rect = null;
-    translate();
+    renderTexts();
     scan();
   };
   $('.js-report').onclick = () => report();
@@ -989,7 +981,7 @@
       if (!rect) return;
       view.manualRect = rect;
       view.rect = null;
-      translate();
+      renderTexts();
       resetGame();
       scan();
     };

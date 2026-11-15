@@ -26,11 +26,11 @@ try {
   await page.bringToFront();
   await sw.evaluate(async () => {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'i18n.js', 'content.js'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'content.js'] });
     await chrome.tabs.sendMessage(tab.id, { type: 'scan-now' });
   });
   const status = () => page.evaluate(() => document.querySelector('chess-hints-panel').shadowRoot.querySelector('.js-status').textContent);
-  for (let i = 0; i < 100 && !/scan \d+ ms|skan \d+ ms/.test(await status()); i++) await sleep(100);
+  for (let i = 0; i < 100 && !/scan \d+ ms/.test(await status()); i++) await sleep(100);
   await page.evaluate(() => {
     const cb = document.querySelector('chess-hints-panel').shadowRoot.querySelector('.js-auto');
     cb.checked = true;
@@ -41,9 +41,9 @@ try {
     const times = [];
     for (let i = 0; i < runs; i++) {
       await page.evaluate(animate => window.cg.set({ fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', animation: { enabled: animate } }), animate);
-      for (let j = 0; j < 100 && !/scan \d+ ms|skan \d+ ms/.test(await status()); j++) await sleep(50);
+      for (let j = 0; j < 100 && !/scan \d+ ms/.test(await status()); j++) await sleep(50);
       await page.evaluate(() => window.cg.move('e2', 'e4'));
-      for (let j = 0; j < 100 && !/Waiting|Czekam/.test(await status()); j++) await sleep(50);
+      for (let j = 0; j < 100 && !/Waiting/.test(await status()); j++) await sleep(50);
       await sleep(1100);
       times.push(await page.evaluate(() => new Promise(resolve => {
         const root = document.querySelector('chess-hints-panel').shadowRoot;

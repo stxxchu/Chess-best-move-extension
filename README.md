@@ -19,7 +19,7 @@ A browser extension for Brave, Chrome and Edge. It finds the chessboard on your 
 - **Auto mode** follows the game: it knows whose turn it is, tracks castling rights and en passant, and waits while your opponent is thinking.
 - **Fix a misread square** by clicking it on the small board. The correction is learned, so the next scans get it right.
 - **Fast:** the first arrows appear about 0.1 s after the opponent's move and get refined as the engine searches deeper.
-- English and Polish interface, dark and light theme, compact mode, keys `1`–`5` switch the level.
+- Dark and light theme, compact mode, keys `1`–`5` switch the level.
 
 ![Marks and the fourth arrow](docs/marks.png)
 

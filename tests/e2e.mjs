@@ -20,7 +20,7 @@ const browser = await puppeteer.launch({
   pipe: true,
   enableExtensions: [extPath],
   userDataDir: profile,
-  args: ['--no-first-run', '--no-default-browser-check', '--lang=en-US', '--window-size=1366,900'],
+  args: ['--no-first-run', '--no-default-browser-check', '--lang=pl-PL', '--window-size=1366,900'],
   defaultViewport: { width: 1366, height: 768 },
 });
 
@@ -69,7 +69,7 @@ const waitFor = async (p, pred, timeout = 20000) => {
   return null;
 };
 
-const final = s => /scan \d+ ms|skan \d+ ms/.test(s.status);
+const final = s => /scan \d+ ms/.test(s.status);
 const panelDo = (p, action, arg) => p.evaluate((action, arg) => {
   const root = document.querySelector('chess-hints-panel').shadowRoot;
   const q = sel => root.querySelector(sel);
@@ -87,7 +87,7 @@ try {
   const trigger = type => sw.evaluate(async type => {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     try { await chrome.tabs.sendMessage(tab.id, { type: 'ping' }); }
-    catch { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'i18n.js', 'content.js'] }); }
+    catch { await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['chessutil.js', 'text.js', 'content.js'] }); }
     await chrome.tabs.sendMessage(tab.id, { type });
   }, type);
 
@@ -99,7 +99,7 @@ try {
   let s = await waitFor(page, s => s.moves.length >= 3 && final(s));
   check(!!s, 'start position: auto-calibrated, suggestions shown');
   if (s) console.log('   ', s.moves.join(' | '), '|', s.status);
-  check(s && s.levelNames.join() === 'Best,Excellent,Good,Average,Worst', 'English UI with an English browser');
+  check(s && s.levelNames.join() === 'Best,Excellent,Good,Average,Worst' && /^Good · depth/.test(s.status), 'English UI even in a Polish browser');
   check(s && s.onboard, 'getting started card is shown on first use');
   check(s && s.fen.startsWith('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq'), 'start FEN recognised');
   check(s && s.arrows === s.moves.length, 'one arrow per suggestion');
@@ -150,10 +150,8 @@ try {
   s = await readUi(page);
   check(s && s.level === 'good', 'key 3 selects Good');
 
-  await panelDo(page, 'select', { sel: '.js-lang', value: 'pl' });
-  s = await readUi(page);
-  check(s && s.levelNames[0] === 'Najlepsze' && /skan \d+ ms/.test(s.status), 'switching to Polish translates the panel and the status: ' + (s && s.status));
-  await panelDo(page, 'select', { sel: '.js-lang', value: 'en' });
+  const langSwitch = await page.evaluate(() => !!document.querySelector('chess-hints-panel').shadowRoot.querySelector('.js-lang'));
+  check(!langSwitch, 'no language switch, the panel is English only');
   await panelDo(page, 'select', { sel: '.js-theme', value: 'light' });
   s = await readUi(page);
   check(s && s.light, 'light theme');
